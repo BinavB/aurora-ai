@@ -1,0 +1,232 @@
+"""Tests for the API layer, driven with FastAPI's TestClient."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from fastapi.testclient import TestClient
+
+from aurora.app.api import create_app
+from aurora.app.config.models import AppSettings, ProviderSettings
+from aurora.app.core.exceptions import ProviderRequestError
+from aurora.app.core.types import ChatRequest, ChatResponse
+from aurora.app.database import Database
+from aurora.app.memory import MemoryStore
+from aurora.app.providers.base import BaseProvider
+from aurora.app.router import Router, build_catalog
+from aurora.app.services.factory import ProviderFactory
+from aurora.app.services.transcription_service import TranscriptionService
+from tests.app.conftest import EchoProvider, ScriptedProvider
+
+
+class FailingProvider(BaseProvider):
+    """A provider whose chat call always fails at the transport layer."""
+
+    name = "openai"
+
+    async def _chat(self, request: ChatRequest) -> ChatResponse:
+        raise ProviderRequestError("simulated outage")
+
+
+def _settings(**keys: str) -> AppSettings:
+    providers = {
+        "ollama": ProviderSettings(base_url="http://localhost:11434"),
+        "openai": ProviderSettings(base_url="https://api.openai.com/v1"),
+        "anthropic": ProviderSettings(base_url="https://api.anthropic.com/v1"),
+        "gemini": ProviderSettings(base_url="https://gen.googleapis.com"),
+        "xai": ProviderSettings(base_url="https://api.x.ai/v1"),
+    }
+    for name, key in keys.items():
+        providers[name] = providers[name].model_copy(update={"api_key": key})
+    return AppSettings(providers=providers)
+
+
+class FakeFactory(ProviderFactory):
+    def __init__(self, provider: BaseProvider) -> None:
+        self._provider = provider
+
+    def create(self, provider: str) -> BaseProvider:
+        return self._provider
+
+
+def _client(provider: BaseProvider, tmp_path: Path, **keys: str) -> TestClient:
+    settings = _settings(**keys)
+    app = create_app(
+        settings=settings,
+        memory=MemoryStore(Database()),
+        router=Router(build_catalog(settings)),
+        factory=FakeFactory(provider),
+        workspace_root=str(tmp_path),
+        transcription=TranscriptionService(
+            transcriber=lambda audio, suffix: "hello from voice"
+        ),
+    )
+    return TestClient(app)
+
+
+def _echo() -> EchoProvider:
+    return EchoProvider(ProviderSettings(base_url="http://echo.local"))
+
+
+# --- basics ---------------------------------------------------------------
+
+
+def test_health_and_providers(tmp_path: Path) -> None:
+    with _client(_echo(), tmp_path) as client:
+        assert client.get("/health").json() == {"status": "ok"}
+        assert "anthropic" in client.get("/providers").json()["providers"]
+
+
+def test_tools_listing(tmp_path: Path) -> None:
+    with _client(_echo(), tmp_path) as client:
+        names = {t["name"] for t in client.get("/tools").json()["tools"]}
+    assert {"read_file", "write_file", "run_terminal"} <= names
+
+
+# --- chat -----------------------------------------------------------------
+
+
+def test_chat_endpoint(tmp_path: Path) -> None:
+    with _client(_echo(), tmp_path) as client:
+        res = client.post("/chat", json={"session_id": "s", "message": "hi"})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["provider"] == "ollama"
+    assert body["content"] == "echo[1]: hi"
+
+
+def test_chat_stream_is_sse(tmp_path: Path) -> None:
+    with _client(_echo(), tmp_path) as client:
+        res = client.post("/chat/stream", json={"session_id": "s", "message": "hi there"})
+    assert res.status_code == 200
+    assert "text/event-stream" in res.headers["content-type"]
+    assert "data: [DONE]" in res.text
+
+
+def test_chat_websocket_streams_tokens(tmp_path: Path) -> None:
+    with _client(_echo(), tmp_path) as client, client.websocket_connect("/ws/chat") as ws:
+        ws.send_json({"session_id": "s", "message": "hi"})
+        tokens = []
+        while (msg := ws.receive_json())["type"] != "done":
+            tokens.append(msg["content"])
+        assert tokens == ["echo[1]:", "hi"]
+
+
+def test_chat_websocket_sends_structured_error_instead_of_crashing(
+    tmp_path: Path,
+) -> None:
+    # A provider outage must surface as an error frame, not close the socket.
+    provider = FailingProvider(ProviderSettings(base_url="http://x"))
+    with (
+        _client(provider, tmp_path, openai="sk-x") as client,
+        client.websocket_connect("/ws/chat") as ws,
+    ):
+        ws.send_json({"session_id": "s", "message": "hi", "prefer_provider": "openai"})
+        msg = ws.receive_json()
+    assert msg["type"] == "error"
+    assert msg["code"] == "provider_request_error"
+
+
+# --- engineering endpoints ------------------------------------------------
+
+
+def test_plan_endpoint(tmp_path: Path) -> None:
+    (tmp_path / "svc.py").write_text("def handler():\n    return 1\n", encoding="utf-8")
+    provider = ScriptedProvider("1. Inspect handler\n2. Add logging")
+    with _client(provider, tmp_path, openai="sk-x") as client:
+        res = client.post("/plan", json={"task": "improve handler"})
+    assert res.status_code == 200
+    steps = [s["description"] for s in res.json()["plan"]["steps"]]
+    assert steps == ["Inspect handler", "Add logging"]
+
+
+def test_review_endpoint(tmp_path: Path) -> None:
+    provider = ScriptedProvider("- missing tests\nSummary: ok")
+    with _client(provider, tmp_path) as client:
+        res = client.post("/review", json={"code": "def f(): pass"})
+    assert res.json()["result"]["findings"] == ["missing tests"]
+
+
+def test_review_honors_provider_preference(tmp_path: Path) -> None:
+    # With a cloud key set, preferring openai routes there (not local ollama).
+    provider = ScriptedProvider("- x\nSummary: fine")
+    with _client(provider, tmp_path, openai="sk-x") as client:
+        res = client.post(
+            "/review", json={"code": "def f(): pass", "prefer_provider": "openai"}
+        )
+    assert res.status_code == 200
+    assert res.json()["provider"] == "openai"
+
+
+def test_implement_dry_run_then_approve(tmp_path: Path) -> None:
+    provider = ScriptedProvider("print('hi')")
+    with _client(provider, tmp_path, openai="sk-x") as client:
+        dry = client.post(
+            "/implement", json={"instruction": "make it", "target_path": "a.py"}
+        ).json()
+        assert dry["executed"] is False
+        assert not (tmp_path / "a.py").exists()
+
+        done = client.post(
+            "/implement",
+            json={"instruction": "make it", "target_path": "a.py", "approve": True},
+        ).json()
+        assert done["executed"] is True
+    assert (tmp_path / "a.py").read_text() == "print('hi')"
+
+
+# --- error handling -------------------------------------------------------
+
+
+def test_router_error_is_structured_409(tmp_path: Path) -> None:
+    # No cloud keys: a tools-requiring implement has no capable model.
+    with _client(_echo(), tmp_path) as client:
+        res = client.post("/implement", json={"instruction": "x", "target_path": "a.py"})
+    assert res.status_code == 409
+    assert res.json()["code"] == "router_error"
+
+
+# --- frontend -------------------------------------------------------------
+
+
+def test_frontend_served_when_configured(tmp_path: Path) -> None:
+    frontend = tmp_path / "ui"
+    frontend.mkdir()
+    (frontend / "index.html").write_text("<h1>AURORA UI</h1>", encoding="utf-8")
+    settings = _settings()
+    app = create_app(
+        settings=settings,
+        memory=MemoryStore(Database()),
+        router=Router(build_catalog(settings)),
+        factory=FakeFactory(_echo()),
+        workspace_root=str(tmp_path),
+        frontend_dir=str(frontend),
+    )
+    with TestClient(app) as client:
+        res = client.get("/")
+    assert res.status_code == 200
+    assert "AURORA UI" in res.text
+    assert "text/html" in res.headers["content-type"]
+
+
+def test_no_frontend_route_when_not_configured(tmp_path: Path) -> None:
+    with _client(_echo(), tmp_path) as client:
+        assert client.get("/").status_code == 404
+
+
+# --- voice / transcription ------------------------------------------------
+
+
+def test_transcribe_returns_text(tmp_path: Path) -> None:
+    with _client(_echo(), tmp_path) as client:
+        res = client.post(
+            "/transcribe",
+            files={"audio": ("clip.webm", b"fake-audio-bytes", "audio/webm")},
+        )
+    assert res.status_code == 200
+    assert res.json() == {"text": "hello from voice"}
+
+
+def test_transcribe_requires_audio(tmp_path: Path) -> None:
+    with _client(_echo(), tmp_path) as client:
+        assert client.post("/transcribe").status_code == 422

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AURORA AI</title>
+    <style>
+      :root { color-scheme: light dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; font: 15px/1.5 system-ui, sans-serif;
+        display: flex; flex-direction: column; height: 100vh;
+      }
+      header {
+        padding: 0.75rem 1rem; border-bottom: 1px solid #8883;
+        display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;
+      }
+      header h1 { font-size: 1rem; margin: 0 0.5rem 0 0; }
+      select, input, button { font: inherit; padding: 0.4rem 0.6rem; }
+      #log { flex: 1; overflow-y: auto; padding: 1rem; }
+      .msg { margin: 0 0 0.75rem; max-width: 70ch; }
+      .msg .who { font-weight: 600; font-size: 0.8rem; opacity: 0.7; }
+      .msg.user { margin-left: auto; text-align: right; }
+      .msg pre { white-space: pre-wrap; margin: 0.2rem 0 0; }
+      form { display: flex; gap: 0.5rem; padding: 0.75rem 1rem; border-top: 1px solid #8883; }
+      #message { flex: 1; }
+      .err { color: #c0392b; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>AURORA AI</h1>
+      <select id="provider" aria-label="Provider"></select>
+      <input id="model" placeholder="model, e.g. gpt-4o-mini" size="24" />
+    </header>
+    <div id="log"></div>
+    <form id="composer">
+      <input id="message" placeholder="Type a message…" autocomplete="off" />
+      <button type="submit">Send</button>
+    </form>
+    <script>
+      const sessionId = "web-" + Math.random().toString(36).slice(2);
+      const log = document.getElementById("log");
+      const providerSel = document.getElementById("provider");
+
+      function add(who, text, cls) {
+        const div = document.createElement("div");
+        div.className = "msg " + (cls || who);
+        div.innerHTML = '<div class="who"></div><pre></pre>';
+        div.querySelector(".who").textContent = who;
+        div.querySelector("pre").textContent = text;
+        log.appendChild(div);
+        log.scrollTop = log.scrollHeight;
+      }
+
+      async function loadProviders() {
+        try {
+          const res = await fetch("/providers");
+          const data = await res.json();
+          for (const name of data.providers) {
+            const opt = document.createElement("option");
+            opt.value = opt.textContent = name;
+            providerSel.appendChild(opt);
+          }
+        } catch (e) {
+          add("system", "Could not load providers: " + e, "err");
+        }
+      }
+
+      document.getElementById("composer").addEventListener("submit", async (ev) => {
+        ev.preventDefault();
+        const input = document.getElementById("message");
+        const text = input.value.trim();
+        const model = document.getElementById("model").value.trim();
+        if (!text || !model) return;
+        add("you", text);
+        input.value = "";
+        try {
+          const res = await fetch("/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              session_id: sessionId,
+              provider: providerSel.value,
+              model,
+              message: text,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.detail || res.statusText);
+          add("aurora", data.content);
+        } catch (e) {
+          add("system", String(e), "err");
+        }
+      });
+
+      loadProviders();
+    </script>
+  </body>
+</html>

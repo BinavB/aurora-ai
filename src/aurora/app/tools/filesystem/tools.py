@@ -1,0 +1,187 @@
+"""Concrete filesystem tools.
+
+Each tool is sandboxed to a root via :class:`PathSandbox` and returns
+structured output. Writes are atomic and back up any file they overwrite.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+from aurora.app.core.exceptions import ToolError
+from aurora.app.tools.base import BaseTool
+from aurora.app.tools.filesystem.io import atomic_write_text, backup_if_exists
+from aurora.app.tools.filesystem.models import (
+    DeleteFileOutput,
+    PathInput,
+    ReadFileOutput,
+    RenameFileInput,
+    RenameFileOutput,
+    SearchInput,
+    SearchMatch,
+    SearchOutput,
+    WriteFileInput,
+    WriteFileOutput,
+)
+from aurora.app.tools.filesystem.paths import PathSandbox
+from aurora.app.tools.models import Permission, ToolMetadata
+
+_CATEGORY = "filesystem"
+
+
+class _FsTool(BaseTool):
+    """Base for filesystem tools sharing a sandbox."""
+
+    def __init__(self, root: str | Path) -> None:
+        self._sandbox = PathSandbox(root)
+        super().__init__()
+
+
+class ReadFileTool(_FsTool):
+    """Read a UTF-8 text file within the sandbox."""
+
+    metadata = ToolMetadata(
+        name="read_file",
+        description="Read a UTF-8 text file within the project root.",
+        category=_CATEGORY,
+        permissions=frozenset({Permission.READ}),
+    )
+    input_model = PathInput
+    output_model = ReadFileOutput
+
+    async def execute(self, payload: PathInput) -> ReadFileOutput:
+        target = self._sandbox.resolve(payload.path)
+        try:
+            content = target.read_text(encoding="utf-8")
+        except OSError as exc:
+            raise ToolError(f"Cannot read '{payload.path}': {exc}") from exc
+        return ReadFileOutput(
+            path=self._sandbox.relative(target),
+            content=content,
+            size_bytes=len(content.encode("utf-8")),
+        )
+
+
+class WriteFileTool(_FsTool):
+    """Atomically write a UTF-8 text file, backing up any existing file."""
+
+    metadata = ToolMetadata(
+        name="write_file",
+        description="Atomically write a UTF-8 text file within the project root.",
+        category=_CATEGORY,
+        permissions=frozenset({Permission.WRITE}),
+    )
+    input_model = WriteFileInput
+    output_model = WriteFileOutput
+
+    async def execute(self, payload: WriteFileInput) -> WriteFileOutput:
+        target = self._sandbox.resolve(payload.path)
+        if target.exists() and not payload.overwrite:
+            raise ToolError(
+                f"File '{payload.path}' exists and overwrite is disabled",
+                details={"path": payload.path},
+            )
+        try:
+            backup = backup_if_exists(target)
+            written = atomic_write_text(target, payload.content)
+        except OSError as exc:
+            raise ToolError(f"Cannot write '{payload.path}': {exc}") from exc
+        return WriteFileOutput(
+            path=self._sandbox.relative(target),
+            bytes_written=written,
+            backup=self._sandbox.relative(backup) if backup else None,
+        )
+
+
+class DeleteFileTool(_FsTool):
+    """Delete a file within the sandbox."""
+
+    metadata = ToolMetadata(
+        name="delete_file",
+        description="Delete a file within the project root.",
+        category=_CATEGORY,
+        permissions=frozenset({Permission.DELETE}),
+    )
+    input_model = PathInput
+    output_model = DeleteFileOutput
+
+    async def execute(self, payload: PathInput) -> DeleteFileOutput:
+        target = self._sandbox.resolve(payload.path)
+        if not target.is_file():
+            raise ToolError(
+                f"No such file '{payload.path}'", details={"path": payload.path}
+            )
+        try:
+            target.unlink()
+        except OSError as exc:
+            raise ToolError(f"Cannot delete '{payload.path}': {exc}") from exc
+        return DeleteFileOutput(path=self._sandbox.relative(target), deleted=True)
+
+
+class RenameFileTool(_FsTool):
+    """Rename or move a file within the sandbox."""
+
+    metadata = ToolMetadata(
+        name="rename_file",
+        description="Rename or move a file within the project root.",
+        category=_CATEGORY,
+        permissions=frozenset({Permission.WRITE}),
+    )
+    input_model = RenameFileInput
+    output_model = RenameFileOutput
+
+    async def execute(self, payload: RenameFileInput) -> RenameFileOutput:
+        src = self._sandbox.resolve(payload.src)
+        dst = self._sandbox.resolve(payload.dst)
+        if not src.exists():
+            raise ToolError(f"No such file '{payload.src}'")
+        if dst.exists():
+            raise ToolError(f"Destination '{payload.dst}' already exists")
+        try:
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            src.rename(dst)
+        except OSError as exc:
+            raise ToolError(f"Cannot rename '{payload.src}': {exc}") from exc
+        return RenameFileOutput(
+            src=self._sandbox.relative(src), dst=self._sandbox.relative(dst)
+        )
+
+
+class SearchProjectTool(_FsTool):
+    """Search text file contents within the sandbox for a substring."""
+
+    metadata = ToolMetadata(
+        name="search_project",
+        description="Search text files within the project root for a substring.",
+        category=_CATEGORY,
+        permissions=frozenset({Permission.READ}),
+    )
+    input_model = SearchInput
+    output_model = SearchOutput
+
+    async def execute(self, payload: SearchInput) -> SearchOutput:
+        matches: list[SearchMatch] = []
+        truncated = False
+        for path in sorted(self._sandbox.root.glob(payload.glob)):
+            if not path.is_file():
+                continue
+            if self._scan(path, payload.query, payload.max_results, matches):
+                truncated = True
+                break
+        return SearchOutput(matches=matches, count=len(matches), truncated=truncated)
+
+    def _scan(
+        self, path: Path, query: str, limit: int, matches: list[SearchMatch]
+    ) -> bool:
+        """Append matches from ``path``; return True if ``limit`` was hit."""
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            return False  # skip binary/unreadable files
+        rel = self._sandbox.relative(path)
+        for number, line in enumerate(text.splitlines(), start=1):
+            if query in line:
+                matches.append(SearchMatch(path=rel, line=number, text=line.strip()))
+                if len(matches) >= limit:
+                    return True
+        return False
