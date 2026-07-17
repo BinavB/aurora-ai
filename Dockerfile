@@ -7,9 +7,13 @@ COPY pyproject.toml ./
 COPY src ./src
 RUN pip install --no-cache-dir -e ".[serve]"
 
+# The web UI is served at "/".
+COPY frontend ./frontend
+ENV AURORA_FRONTEND_DIR=/app/frontend
+
 # Hosts (Render, Fly, Koyeb, Railway, Cloud Run, ...) inject $PORT.
 ENV PORT=8000
 EXPOSE 8000
 
 # Bind to 0.0.0.0 so the container is reachable; honour the platform's $PORT.
-CMD ["sh", "-c", "uvicorn aurora.api.__main__:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "uvicorn aurora.app.api.__main__:app --host 0.0.0.0 --port ${PORT:-8000}"]

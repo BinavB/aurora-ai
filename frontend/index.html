@@ -17,217 +17,199 @@
     />
     <style>
       :root {
-        /* Gemini-style aurora palette */
-        --blue: #4d8dff;
-        --indigo: #7b6cff;
-        --violet: #a97bff;
-        --pink: #ff7bc5;
-        --cyan: #38e6ff;
-        --accent: #8f9bff;
-        --accent-lt: #bcd0ff;
-        --bg0: #05060c;
-        --bg1: #090a14;
-        --ink: #eef1ff;
-        --muted: #9aa0c4;
-        --muted-2: #626890;
-        --glass: rgba(255, 255, 255, 0.045);
-        --glass-2: rgba(255, 255, 255, 0.075);
-        --stroke: rgba(255, 255, 255, 0.09);
-        --stroke-acc: rgba(148, 137, 255, 0.4);
-        --err: #ff6b8b;
-        --radius: 20px;
-        --display: "Space Grotesk", system-ui, sans-serif;
-        --body: "Inter", system-ui, sans-serif;
+        --blue: #4d8dff; --indigo: #7b6cff; --violet: #a97bff; --pink: #ff7bc5; --cyan: #38e6ff;
+        --accent: #8f9bff; --accent-lt: #bcd0ff;
+        --bg0: #05060c; --ink: #eef1ff; --muted: #9aa0c4; --muted-2: #626890;
+        --glass: rgba(255,255,255,0.045); --glass-2: rgba(255,255,255,0.075);
+        --stroke: rgba(255,255,255,0.09); --stroke-acc: rgba(148,137,255,0.4); --err: #ff6b8b;
+        --emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla", "EmojiOne Color";
+        --display: "Space Grotesk", system-ui, var(--emoji), sans-serif; --body: "Inter", system-ui, var(--emoji), sans-serif;
         --grad: linear-gradient(100deg, var(--blue), var(--indigo) 42%, var(--violet) 68%, var(--pink));
       }
       * { box-sizing: border-box; }
+      [hidden] { display: none !important; }  /* the hidden attribute must always win */
       html, body { height: 100%; }
-      body {
-        margin: 0; font-family: var(--body); color: var(--ink); background: var(--bg0);
-        overflow: hidden; -webkit-font-smoothing: antialiased;
-      }
+      body { margin: 0; font-family: var(--body); color: var(--ink); background: var(--bg0); overflow: hidden; -webkit-font-smoothing: antialiased; }
 
-      /* ---------- flowing "thinking" aurora ---------- */
       #bg { position: fixed; inset: 0; z-index: 0; display: block; }
-      .aurora, .aurora2 {
-        position: fixed; inset: -25%; z-index: -1; pointer-events: none;
-        filter: blur(95px) saturate(150%); will-change: transform, filter;
-      }
-      .aurora {
-        opacity: 0.72;
-        background:
-          radial-gradient(34% 40% at 20% 28%, rgba(77, 141, 255, 0.55), transparent 60%),
-          radial-gradient(32% 38% at 78% 22%, rgba(169, 123, 255, 0.5), transparent 60%),
-          radial-gradient(40% 46% at 66% 78%, rgba(255, 123, 197, 0.45), transparent 62%),
-          radial-gradient(30% 34% at 32% 82%, rgba(56, 230, 255, 0.4), transparent 60%);
-        animation: flow 19s ease-in-out infinite alternate, hue 24s linear infinite;
-        transition: transform 0.5s ease-out;
-      }
-      .aurora2 {
-        opacity: 0.5;
-        background:
-          radial-gradient(40% 44% at 70% 30%, rgba(123, 108, 255, 0.5), transparent 60%),
-          radial-gradient(36% 40% at 28% 60%, rgba(255, 123, 197, 0.4), transparent 62%),
-          radial-gradient(30% 36% at 85% 75%, rgba(77, 141, 255, 0.42), transparent 60%);
-        animation: flow2 26s ease-in-out infinite alternate, hue 30s linear infinite reverse;
-      }
-      @keyframes flow {
-        0% { transform: translate3d(-3%, -2%, 0) rotate(0deg) scale(1); }
-        50% { transform: translate3d(4%, 1%, 0) rotate(8deg) scale(1.15); }
-        100% { transform: translate3d(-1%, 3%, 0) rotate(-6deg) scale(1.08); }
-      }
-      @keyframes flow2 {
-        0% { transform: translate3d(3%, 2%, 0) scale(1.1); }
-        100% { transform: translate3d(-4%, -2%, 0) scale(1.2); }
-      }
+      .aurora, .aurora2 { position: fixed; inset: -25%; z-index: -1; pointer-events: none; filter: blur(95px) saturate(150%); will-change: transform, filter; }
+      .aurora { opacity: 0.72; background:
+        radial-gradient(34% 40% at 20% 28%, rgba(77,141,255,0.55), transparent 60%),
+        radial-gradient(32% 38% at 78% 22%, rgba(169,123,255,0.5), transparent 60%),
+        radial-gradient(40% 46% at 66% 78%, rgba(255,123,197,0.45), transparent 62%),
+        radial-gradient(30% 34% at 32% 82%, rgba(56,230,255,0.4), transparent 60%);
+        animation: flow 19s ease-in-out infinite alternate, hue 24s linear infinite; transition: transform 0.5s ease-out; }
+      .aurora2 { opacity: 0.5; background:
+        radial-gradient(40% 44% at 70% 30%, rgba(123,108,255,0.5), transparent 60%),
+        radial-gradient(36% 40% at 28% 60%, rgba(255,123,197,0.4), transparent 62%),
+        radial-gradient(30% 36% at 85% 75%, rgba(77,141,255,0.42), transparent 60%);
+        animation: flow2 26s ease-in-out infinite alternate, hue 30s linear infinite reverse; }
+      @keyframes flow { 0% { transform: translate3d(-3%,-2%,0) rotate(0deg) scale(1); } 50% { transform: translate3d(4%,1%,0) rotate(8deg) scale(1.15); } 100% { transform: translate3d(-1%,3%,0) rotate(-6deg) scale(1.08); } }
+      @keyframes flow2 { 0% { transform: translate3d(3%,2%,0) scale(1.1); } 100% { transform: translate3d(-4%,-2%,0) scale(1.2); } }
       @keyframes hue { to { filter: blur(95px) saturate(150%) hue-rotate(360deg); } }
-      body::after {
-        content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
-        background: radial-gradient(120% 82% at 50% -12%, transparent 42%, rgba(3, 4, 10, 0.8) 100%);
-      }
+      body::after { content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(120% 82% at 50% -12%, transparent 42%, rgba(3,4,10,0.8) 100%); }
 
-      /* ---------- shell ---------- */
-      .app { position: relative; z-index: 2; height: 100vh; display: flex; flex-direction: column; }
-      header { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.4rem;
-        -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+      .app { position: relative; z-index: 2; height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
+      header { display: flex; align-items: center; gap: 1rem; padding: 0.9rem 1.4rem; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
       .brand { display: flex; align-items: center; gap: 0.7rem; }
-      .brand .logo { width: 42px; height: 42px; filter: drop-shadow(0 0 16px rgba(140, 130, 255, 0.6)); }
-      .brand h1 {
-        font-family: var(--display); font-weight: 700; font-size: 1.35rem; margin: 0; letter-spacing: 0.18em;
-        background: var(--grad); background-size: 200% auto; -webkit-background-clip: text; background-clip: text;
-        color: transparent; animation: shimmer 8s linear infinite;
-      }
+      .brand .logo { width: 40px; height: 40px; filter: drop-shadow(0 0 16px rgba(140,130,255,0.6)); }
+      .brand h1 { font-family: var(--display); font-weight: 700; font-size: 1.3rem; margin: 0; letter-spacing: 0.18em;
+        background: var(--grad); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 8s linear infinite; }
       @keyframes shimmer { to { background-position: 200% center; } }
-      .brand small { display: block; font-size: 0.62rem; letter-spacing: 0.34em; color: var(--muted-2); text-transform: uppercase; margin-top: 2px; }
+      .brand small { display: block; font-size: 0.6rem; letter-spacing: 0.34em; color: var(--muted-2); text-transform: uppercase; margin-top: 2px; }
       .spacer { flex: 1; }
-      .pill {
-        display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.85rem;
-        border: 1px solid var(--stroke); border-radius: 999px; background: var(--glass);
-        -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); font-size: 0.82rem; color: var(--ink);
-      }
-      select.pill { appearance: none; cursor: pointer; padding-right: 1.8rem;
-        background-image: linear-gradient(45deg, transparent 50%, var(--accent) 50%), linear-gradient(135deg, var(--accent) 50%, transparent 50%);
-        background-position: right 0.95rem center, right 0.7rem center; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
-      select.pill option { background: #0b0d18; color: var(--ink); }
-      .status { gap: 0.5rem; }
+      .pill { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.8rem; border: 1px solid var(--stroke); border-radius: 999px; background: var(--glass); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); font-size: 0.8rem; color: var(--ink); }
       .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted-2); }
       .status.up .dot { background: var(--accent-lt); animation: pulse 2s infinite; }
       @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(140,130,255,0.5); } 70% { box-shadow: 0 0 0 7px rgba(140,130,255,0); } 100% { box-shadow: 0 0 0 0 rgba(140,130,255,0); } }
 
-      nav { display: flex; gap: 0.4rem; padding: 0 1.4rem; }
-      nav button {
-        font-family: var(--display); font-weight: 500; font-size: 0.9rem; letter-spacing: 0.02em;
-        border: none; background: transparent; color: var(--muted); cursor: pointer;
-        padding: 0.6rem 1rem; border-radius: 12px 12px 0 0; position: relative; transition: color 0.2s;
-      }
-      nav button:hover { color: var(--ink); }
-      nav button.active { color: var(--accent-lt); }
-      nav button.active::after {
-        content: ""; position: absolute; left: 1rem; right: 1rem; bottom: -1px; height: 2px;
-        background: var(--grad); border-radius: 2px; box-shadow: 0 0 12px var(--indigo);
-      }
+      main { flex: 1; min-height: 0; overflow-y: auto; padding: 1rem 1.2rem; }
+      #log { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 0.9rem; padding-bottom: 0.5rem; }
+      #hero { text-align: center; color: var(--muted); margin: 14vh auto 0; max-width: 560px; }
+      #hero .logo { width: 64px; height: 64px; filter: drop-shadow(0 0 22px rgba(140,130,255,0.6)); }
+      #hero h2 { font-family: var(--display); font-weight: 600; font-size: 1.5rem; color: var(--ink); margin: 1rem 0 0.4rem; letter-spacing: 0.01em; }
+      #hero p { margin: 0; font-size: 0.92rem; }
 
-      main { flex: 1; overflow-y: auto; padding: 1.2rem 1.4rem 2rem; }
-      .wrap { max-width: 940px; margin: 0 auto; }
-      .tab { display: none; animation: rise 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
-      .tab.active { display: block; }
-      @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-
-      .card {
-        border: 1px solid var(--stroke); border-radius: var(--radius);
-        background: linear-gradient(180deg, var(--glass-2), var(--glass));
-        -webkit-backdrop-filter: blur(22px) saturate(140%); backdrop-filter: blur(22px) saturate(140%);
-        box-shadow: 0 20px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
-        padding: 1.1rem 1.2rem; margin-top: 1rem;
-      }
-      .card h3 { font-family: var(--display); font-size: 0.98rem; margin: 0 0 0.6rem; font-weight: 600; }
-      .field label { display: block; font-size: 0.68rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); margin: 0.9rem 0 0.35rem; }
-      input, textarea {
-        width: 100%; font: inherit; color: var(--ink); background: rgba(0,0,0,0.3);
-        border: 1px solid var(--stroke); border-radius: 14px; padding: 0.7rem 0.9rem; outline: none;
-        transition: border-color 0.2s, box-shadow 0.2s;
-      }
-      input::placeholder, textarea::placeholder { color: var(--muted-2); }
-      input:focus, textarea:focus { border-color: var(--stroke-acc); box-shadow: 0 0 0 4px rgba(140,130,255,0.14); }
-      textarea { min-height: 8.5rem; resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.86rem; }
-
-      button.act {
-        font-family: var(--display); font-weight: 600; letter-spacing: 0.02em; cursor: pointer;
-        color: #fff; border: none; border-radius: 14px; padding: 0.7rem 1.3rem;
-        background: var(--grad); background-size: 180% auto;
-        box-shadow: 0 8px 26px rgba(123,108,255,0.4), inset 0 1px 0 rgba(255,255,255,0.35);
-        text-shadow: 0 1px 6px rgba(0,0,0,0.25);
-        transition: transform 0.15s ease, box-shadow 0.2s ease, background-position 0.5s ease;
-      }
-      button.act:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(169,123,255,0.55); background-position: 100% center; }
-      button.act:active { transform: translateY(0); }
-      button.act:disabled { filter: grayscale(0.6) brightness(0.8); cursor: default; box-shadow: none; }
-      .toolbar { display: flex; gap: 0.7rem; align-items: center; flex-wrap: wrap; margin-top: 0.9rem; }
-      .check { display: inline-flex; align-items: center; gap: 0.45rem; color: var(--muted); font-size: 0.85rem; }
-      .check input { width: auto; accent-color: var(--indigo); }
-
-      /* chat */
-      #chatLog { display: flex; flex-direction: column; gap: 0.85rem; min-height: 40vh; padding: 0.3rem; }
-      .msg { max-width: 78%; }
-      .msg .who { font-size: 0.64rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted-2); margin: 0 0.3rem 0.3rem; }
-      .msg .bubble {
-        padding: 0.75rem 1rem; border-radius: 16px; border: 1px solid var(--stroke);
-        background: var(--glass-2); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
-        white-space: pre-wrap; word-break: break-word; font-size: 0.92rem; line-height: 1.55;
-      }
-      .msg.user { align-self: flex-end; }
-      .msg.user .who { text-align: right; }
-      .msg.user .bubble {
-        background: linear-gradient(135deg, rgba(77,141,255,0.22), rgba(169,123,255,0.16), rgba(255,123,197,0.14));
-        border-color: var(--stroke-acc); color: var(--ink);
-      }
+      .msg { max-width: 82%; }
+      .msg .who { font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted-2); margin: 0 0.3rem 0.3rem; }
+      .msg .bubble { padding: 0.75rem 1rem; border-radius: 16px; border: 1px solid var(--stroke); background: var(--glass-2); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); white-space: pre-wrap; word-break: break-word; font-size: 0.92rem; line-height: 1.55; }
+      /* rendered markdown inside a reply bubble */
+      .msg .bubble.md { white-space: normal; }
+      .bubble.md strong { color: #fff; font-weight: 700; }
+      .bubble.md em { font-style: italic; }
+      .bubble.md code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.86em; background: rgba(0,0,0,0.32); border: 1px solid var(--stroke); border-radius: 6px; padding: 0.05rem 0.34rem; }
+      .bubble.md pre.code { margin: 0.55rem 0; padding: 0.7rem 0.85rem; background: rgba(0,0,0,0.36); border: 1px solid var(--stroke); border-radius: 12px; overflow-x: auto; font-size: 0.84rem; line-height: 1.5; }
+      .bubble.md ul.md { margin: 0.4rem 0; padding-left: 1.2rem; }
+      .bubble.md ul.md li { margin: 0.16rem 0; }
+      .bubble.md a { color: var(--accent-lt); }
+      .msg.user { align-self: flex-end; } .msg.user .who { text-align: right; }
+      .msg.user .bubble { background: linear-gradient(135deg, rgba(77,141,255,0.22), rgba(169,123,255,0.16), rgba(255,123,197,0.14)); border-color: var(--stroke-acc); }
       .msg.err .bubble { border-color: rgba(255,107,139,0.45); color: var(--err); }
-      .msg .meta { font-size: 0.66rem; color: var(--muted-2); margin: 0.3rem 0.3rem 0; letter-spacing: 0.05em; }
+      .msg .meta { font-size: 0.66rem; color: var(--muted-2); margin: 0.3rem 0.3rem 0; }
       .cursor::after { content: "▋"; color: var(--accent-lt); animation: blink 1s steps(2) infinite; }
       @keyframes blink { 50% { opacity: 0; } }
 
-      form#chatForm { display: flex; gap: 0.6rem; margin-top: 1rem; }
-      #engine { border-color: var(--stroke-acc); font-family: var(--display); font-size: 0.78rem; }
-      .mic {
-        width: auto; flex: 0 0 auto; padding: 0.6rem 0.8rem; border-radius: 14px;
-        border: 1px solid var(--stroke); background: var(--glass-2); color: var(--ink); cursor: pointer;
-        font-size: 1rem; transition: border-color 0.2s, box-shadow 0.2s, color 0.2s;
-      }
-      .mic:hover { border-color: var(--stroke-acc); }
-      .mic.rec { border-color: #ff6b8b; color: #ff6b8b; animation: recpulse 1.1s infinite; }
-      @keyframes recpulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,107,139,0.4); } 50% { box-shadow: 0 0 0 7px rgba(255,107,139,0); } }
-      .copy {
-        margin-left: 0.6rem; font-size: 0.6rem; letter-spacing: 0.09em; text-transform: uppercase;
-        background: transparent; border: 1px solid var(--stroke); color: var(--muted);
-        border-radius: 8px; padding: 2px 7px; cursor: pointer;
-      }
-      .copy:hover { color: var(--ink); border-color: var(--stroke-acc); }
+      .card { border: 1px solid var(--stroke); border-radius: 18px; background: linear-gradient(180deg,var(--glass-2),var(--glass)); -webkit-backdrop-filter: blur(22px) saturate(140%); backdrop-filter: blur(22px) saturate(140%); box-shadow: 0 16px 46px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06); padding: 1rem 1.1rem; }
+      .card h3 { font-family: var(--display); font-size: 0.92rem; margin: 0 0 0.5rem; font-weight: 600; }
       pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.85rem; overflow-x: auto; }
       .steps { list-style: none; margin: 0; padding: 0; }
-      .steps li { position: relative; padding: 0.5rem 0 0.5rem 1.6rem; border-left: 1px solid var(--stroke); margin-left: 0.4rem; }
-      .steps li::before { content: ""; position: absolute; left: -5px; top: 0.85rem; width: 9px; height: 9px; border-radius: 50%; background: var(--indigo); box-shadow: 0 0 10px var(--violet); }
+      .steps li { position: relative; padding: 0.45rem 0 0.45rem 1.5rem; border-left: 1px solid var(--stroke); margin-left: 0.4rem; }
+      .steps li::before { content: ""; position: absolute; left: -5px; top: 0.8rem; width: 9px; height: 9px; border-radius: 50%; background: var(--indigo); box-shadow: 0 0 10px var(--violet); }
       .chips { display: flex; flex-direction: column; gap: 0.5rem; }
-      .chip { padding: 0.55rem 0.8rem; border: 1px solid var(--stroke); border-radius: 12px; background: rgba(0,0,0,0.28); font-size: 0.88rem; }
+      .chip { padding: 0.5rem 0.8rem; border: 1px solid var(--stroke); border-radius: 12px; background: rgba(0,0,0,0.28); font-size: 0.88rem; }
       .tag { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.05em; }
-      /* galaxy "thinking" indicator */
-      .thinking { display: inline-flex; align-items: center; gap: 0.6rem; }
-      .thinking .stars { display: inline-flex; gap: 5px; align-items: center; }
-      .thinking .stars i {
-        width: 6px; height: 6px; border-radius: 50%; display: block; background: var(--accent-lt);
-        box-shadow: 0 0 9px var(--indigo); animation: twinkle 1.15s ease-in-out infinite;
-      }
-      .thinking .stars i:nth-child(1) { background: var(--blue); box-shadow: 0 0 9px var(--blue); animation-delay: 0s; }
-      .thinking .stars i:nth-child(2) { background: var(--indigo); box-shadow: 0 0 9px var(--indigo); animation-delay: 0.15s; }
-      .thinking .stars i:nth-child(3) { background: var(--violet); box-shadow: 0 0 9px var(--violet); animation-delay: 0.3s; }
-      .thinking .stars i:nth-child(4) { background: var(--pink); box-shadow: 0 0 9px var(--pink); animation-delay: 0.45s; }
-      .thinking .stars i:nth-child(5) { background: var(--cyan); box-shadow: 0 0 9px var(--cyan); animation-delay: 0.6s; }
-      @keyframes twinkle { 0%, 100% { transform: scale(0.45); opacity: 0.35; } 50% { transform: scale(1.25); opacity: 1; } }
-      .thinking .tlabel {
-        font-family: var(--display); font-size: 0.82rem; letter-spacing: 0.03em;
-        background: var(--grad); background-size: 200% auto; -webkit-background-clip: text; background-clip: text;
-        color: transparent; animation: shimmer 4s linear infinite;
-      }
       .ok { color: var(--accent-lt); } .bad { color: var(--err); }
+      .copy { margin-left: 0.6rem; font-size: 0.6rem; letter-spacing: 0.09em; text-transform: uppercase; background: transparent; border: 1px solid var(--stroke); color: var(--muted); border-radius: 8px; padding: 2px 7px; cursor: pointer; }
+      .copy:hover { color: var(--ink); border-color: var(--stroke-acc); }
+      .dl { margin-left: 0.5rem; font-size: 0.62rem; letter-spacing: 0.08em; text-transform: uppercase; border: 1px solid var(--stroke-acc); color: var(--accent-lt); background: transparent; border-radius: 8px; padding: 2px 8px; cursor: pointer; }
+      .dl:hover { color: #fff; background: var(--grad); background-size: 180% auto; border-color: transparent; }
+
+      /* thinking loader = spinning atom + space words */
+      .thinking { display: inline-flex; align-items: center; gap: 0.7rem; }
+      .thinking .loader { width: 30px; height: 30px; flex: 0 0 auto; filter: drop-shadow(0 0 9px rgba(140,130,255,0.75)); }
+      .thinking .loader .lcore { transform-box: fill-box; transform-origin: center; animation: corepulse 1.5s ease-in-out infinite; }
+      @keyframes corepulse { 0%,100% { transform: scale(0.78); opacity: 0.85; } 50% { transform: scale(1.15); opacity: 1; } }
+      .thinking .tlabel { font-family: var(--display); font-size: 0.82rem; letter-spacing: 0.03em; background: var(--grad); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 4s linear infinite; }
+
+      /* Gemini-style bottom composer */
+      .composer { padding: 0.4rem 1.2rem 1.1rem; }
+      .composer .inner { max-width: 900px; margin: 0 auto; }
+      .modes { display: flex; gap: 0.35rem; margin: 0 0 0.55rem; flex-wrap: wrap; }
+      .modes button { -webkit-appearance: none; appearance: none; outline: none; list-style: none; font-family: var(--display); font-size: 0.8rem; color: var(--muted); background: transparent; border: 1px solid var(--stroke); border-radius: 999px; padding: 0.4rem 0.95rem; cursor: pointer; transition: all 0.2s; }
+      .modes button::before, .modes button::after, .modes button::marker { content: none; display: none; }
+      .modes button { -webkit-tap-highlight-color: transparent; -webkit-text-decoration: none; text-decoration: none; }
+      .modes button:hover { color: var(--ink); }
+      .modes button.active { color: #fff; background: var(--grad); background-size: 180% auto; border-color: transparent; box-shadow: 0 4px 16px rgba(123,108,255,0.4); }
+      .bar { display: flex; align-items: flex-end; gap: 0.5rem; border: 1px solid var(--stroke); border-radius: 22px; background: linear-gradient(180deg,var(--glass-2),var(--glass)); -webkit-backdrop-filter: blur(22px) saturate(140%); backdrop-filter: blur(22px) saturate(140%); box-shadow: 0 16px 50px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06); padding: 0.5rem 0.55rem 0.5rem 1rem; }
+      .bar textarea { flex: 1; border: none; outline: none; background: transparent; color: var(--ink); resize: none; min-height: 1.5rem; max-height: 9rem; padding: 0.45rem 0; font-family: var(--body); font-size: 0.98rem; line-height: 1.4; }
+      .bar textarea::placeholder { color: var(--muted-2); }
+      .iconbtn { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 14px; border: 1px solid var(--stroke); background: var(--glass-2); color: var(--ink); cursor: pointer; font-size: 1.05rem; transition: border-color 0.2s, box-shadow 0.2s, color 0.2s; }
+      .planeicon { width: 20px; height: 20px; transform: rotate(-45deg); transform-origin: center; margin-left: 1px; }
+      .iconbtn:hover { border-color: var(--stroke-acc); }
+      .iconbtn.rec { border-color: #ff6b8b; color: #ff6b8b; animation: recpulse 1.1s infinite; }
+      @keyframes recpulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,107,139,0.4); } 50% { box-shadow: 0 0 0 7px rgba(255,107,139,0); } }
+      .send { border: none; color: #fff; background: var(--grad); background-size: 180% auto; box-shadow: 0 6px 18px rgba(123,108,255,0.4); }
+      .send:hover { background-position: 100% center; box-shadow: 0 10px 26px rgba(169,123,255,0.55); }
+      .implExtras { display: flex; gap: 0.5rem; align-items: center; margin: 0.55rem 0 0; flex-wrap: wrap; }
+      .implExtras input { flex: 1; min-width: 12rem; max-width: 340px; font: inherit; color: var(--ink); background: rgba(0,0,0,0.3); border: 1px solid var(--stroke); border-radius: 12px; padding: 0.5rem 0.75rem; outline: none; }
+      .implExtras input:focus { border-color: var(--stroke-acc); }
+      .check { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--muted); font-size: 0.82rem; }
+      .check input { accent-color: var(--indigo); }
+      .row2 { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.55rem; flex-wrap: wrap; }
+      #engine { border-color: var(--stroke-acc); font-family: var(--display); }
+      .row2 .hint { margin-left: auto; font-size: 0.68rem; color: var(--muted-2); }
+
+      /* ===== mobile ===== */
+      @media (max-width: 640px) {
+        header { gap: 0.6rem; padding: 0.7rem 0.9rem; }
+        .brand h1 { font-size: 1.1rem; letter-spacing: 0.12em; }
+        .brand small { display: none; }
+        #status { display: none; }               /* drop the "online" pill on phones */
+        #engine { font-size: 0.72rem; padding: 0.35rem 0.65rem; max-width: 52vw;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        main { padding: 0.8rem 0.7rem; }
+        /* narrower gutters + clear the browser/nav bar at the bottom */
+        .composer { padding: 0.35rem 0.7rem calc(0.9rem + env(safe-area-inset-bottom)); }
+        .modes { gap: 0.3rem; margin-bottom: 0.45rem; }
+        .modes button { padding: 0.35rem 0.7rem; font-size: 0.75rem; }
+        .bar { gap: 0.35rem; padding: 0.45rem 0.4rem 0.45rem 0.8rem; }
+        .bar textarea { font-size: 0.9rem; }
+        .iconbtn { width: 38px; height: 38px; }
+        .msg { max-width: 90%; }
+        .row2 { gap: 0.4rem 0.45rem; }            /* wrap keeps persona (emotion) visible */
+        .row2 .hint { display: none; }            /* free space so all dials fit */
+        #keysBtn { display: none; }               /* hide Keys on phones */
+        #attachBtn, #micBtn { display: none; }    /* hide camera + mic on phones */
+        /* collapsed dials show emoji + one word; extra words show in the open menu */
+        .cs-trigger .cs-rest { display: none; }
+        /* opened menus fit the screen and wrap long labels instead of overflowing */
+        .cs-menu { min-width: 0; width: max-content; max-width: calc(100vw - 20px); }
+        .cs-opt { white-space: normal; }
+      }
+      #keysBtn { cursor: pointer; }
+      .effort { display: inline-flex; border: 1px solid var(--stroke); border-radius: 999px; overflow: hidden; }
+      .effort button { font-family: var(--display); font-size: 0.76rem; color: var(--muted); background: transparent; border: none; padding: 0.42rem 0.72rem; cursor: pointer; }
+      .effort button:hover { color: var(--ink); }
+      .effort button.on { color: #fff; background: var(--grad); background-size: 180% auto; }
+      .pill.on { color: #fff; background: var(--grad); background-size: 180% auto; border-color: transparent; box-shadow: 0 4px 16px rgba(123,108,255,0.4); }
+      /* custom popup dropdown */
+      .cs { position: relative; display: inline-block; }
+      .cs-trigger { display: inline-flex; align-items: center; gap: 0.45rem; cursor: pointer; }
+      .cs-caret { color: var(--muted); font-size: 0.65rem; transition: transform 0.2s; }
+      .cs.open .cs-caret { transform: rotate(180deg); }
+      .cs-menu {
+        position: absolute; bottom: calc(100% + 8px); left: 0; min-width: 230px; z-index: 60;
+        display: flex; flex-direction: column; gap: 2px; padding: 6px; margin: 0;
+        border: 1px solid var(--stroke); border-radius: 16px;
+        background: linear-gradient(180deg, rgba(18,20,32,0.97), rgba(12,14,24,0.97));
+        -webkit-backdrop-filter: blur(22px) saturate(150%); backdrop-filter: blur(22px) saturate(150%);
+        box-shadow: 0 22px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
+        animation: rise 0.16s cubic-bezier(0.2,0.8,0.2,1);
+      }
+      .cs-opt { text-align: left; font: inherit; font-size: 0.85rem; color: var(--ink); background: transparent; border: none; border-radius: 11px; padding: 0.5rem 0.7rem; cursor: pointer; white-space: nowrap; }
+      .cs-opt:hover { background: rgba(140,130,255,0.16); }
+      .cs-opt.sel { color: var(--accent-lt); background: rgba(140,130,255,0.20); }
+      .roster { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.6rem; }
+      .roster .chip { font-size: 0.72rem; padding: 0.3rem 0.6rem; }
+      .overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(3,4,10,0.6); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+      .overlay[hidden] { display: none; }
+      .keys-card { width: min(440px, 92vw); border: 1px solid var(--stroke); border-radius: 20px; background: linear-gradient(180deg,var(--glass-2),var(--glass)); -webkit-backdrop-filter: blur(24px) saturate(140%); backdrop-filter: blur(24px) saturate(140%); box-shadow: 0 24px 70px rgba(0,0,0,0.6); padding: 1.2rem 1.3rem; }
+      .keys-card h3 { font-family: var(--display); margin: 0 0 0.3rem; font-size: 1.05rem; }
+      .keys-card label { display: flex; justify-content: space-between; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin: 0.7rem 0 0.25rem; }
+      .keys-card label a { text-transform: none; letter-spacing: 0; color: var(--accent-lt); text-decoration: none; }
+      .keys-card label a:hover { text-decoration: underline; }
+      .keys-card input { width: 100%; font: inherit; color: var(--ink); background: rgba(0,0,0,0.3); border: 1px solid var(--stroke); border-radius: 12px; padding: 0.5rem 0.7rem; outline: none; }
+      .keys-card input:focus { border-color: var(--stroke-acc); }
+      .keys-actions { display: flex; gap: 0.6rem; align-items: center; margin-top: 1rem; flex-wrap: wrap; }
+      .keys-list { max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 0.55rem; margin: 0.7rem 0; }
+      .keys-row label { display: flex; justify-content: space-between; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin: 0 0 0.2rem; }
+      .keys-row label a { text-transform: none; letter-spacing: 0; color: var(--accent-lt); text-decoration: none; }
+      .keys-row.hide { display: none; }
+      .attachbar { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
+      .attachbar .chip { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.55rem; }
+      .attachbar .chip img { width: 26px; height: 26px; object-fit: cover; border-radius: 6px; }
+      .attachbar .chip button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.85rem; padding: 0; }
+      .attachbar .chip button:hover { color: var(--err); }
       main::-webkit-scrollbar { width: 10px; } main::-webkit-scrollbar-thumb { background: rgba(140,130,255,0.3); border-radius: 10px; }
     </style>
   </head>
@@ -241,449 +223,553 @@
         <div class="brand">
           <svg class="logo" viewBox="0 0 64 64" fill="none" aria-hidden="true">
             <defs>
-              <radialGradient id="core" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stop-color="#ffffff" />
-                <stop offset="40%" stop-color="#a97bff" />
-                <stop offset="100%" stop-color="#4d8dff" />
-              </radialGradient>
-              <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#4d8dff" />
-                <stop offset="50%" stop-color="#a97bff" />
-                <stop offset="100%" stop-color="#ff7bc5" />
-              </linearGradient>
+              <radialGradient id="core" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffffff" /><stop offset="40%" stop-color="#a97bff" /><stop offset="100%" stop-color="#4d8dff" /></radialGradient>
+              <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4d8dff" /><stop offset="50%" stop-color="#a97bff" /><stop offset="100%" stop-color="#ff7bc5" /></linearGradient>
             </defs>
             <g stroke="url(#ring)" stroke-width="1.6" opacity="0.9">
-              <ellipse cx="32" cy="32" rx="26" ry="10">
-                <animateTransform attributeName="transform" type="rotate" from="0 32 32" to="360 32 32" dur="14s" repeatCount="indefinite" />
-              </ellipse>
-              <ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(60 32 32)">
-                <animateTransform attributeName="transform" type="rotate" from="60 32 32" to="420 32 32" dur="18s" repeatCount="indefinite" />
-              </ellipse>
-              <ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(120 32 32)">
-                <animateTransform attributeName="transform" type="rotate" from="120 32 32" to="480 32 32" dur="22s" repeatCount="indefinite" />
-              </ellipse>
+              <ellipse cx="32" cy="32" rx="26" ry="10"><animateTransform attributeName="transform" type="rotate" from="0 32 32" to="360 32 32" dur="14s" repeatCount="indefinite" /></ellipse>
+              <ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(60 32 32)"><animateTransform attributeName="transform" type="rotate" from="60 32 32" to="420 32 32" dur="18s" repeatCount="indefinite" /></ellipse>
+              <ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(120 32 32)"><animateTransform attributeName="transform" type="rotate" from="120 32 32" to="480 32 32" dur="22s" repeatCount="indefinite" /></ellipse>
             </g>
             <circle cx="32" cy="32" r="7" fill="url(#core)" />
-            <circle cx="58" cy="32" r="2.3" fill="#ff7bc5" />
-            <circle cx="19" cy="12" r="1.8" fill="#4d8dff" />
-            <circle cx="45" cy="52" r="1.8" fill="#a97bff" />
           </svg>
-          <div>
-            <h1>AURORA</h1>
-            <small>AI Engineering Platform</small>
-          </div>
+          <div><h1>AURORA</h1><small>AI Engineering Platform</small></div>
         </div>
         <span class="spacer"></span>
-        <select class="pill" id="provider" title="Provider"></select>
-        <span class="pill" id="engine" title="Engine auto-selected by the router">⚡ auto</span>
+        <span class="pill" id="engine" title="Active engine (auto-selected)">✨ auto</span>
         <span class="pill status" id="status"><span class="dot"></span><span id="statusText">connecting…</span></span>
       </header>
 
-      <nav>
-        <button type="button" data-tab="chat" class="active">Chat</button>
-        <button type="button" data-tab="plan">Plan</button>
-        <button type="button" data-tab="review">Review</button>
-        <button type="button" data-tab="implement">Implement</button>
-      </nav>
-
       <main>
-        <div class="wrap">
-          <section class="tab active" id="tab-chat">
-            <div id="chatLog"></div>
-            <form id="chatForm">
-              <input id="chatInput" placeholder="Ask AURORA anything…" autocomplete="off" />
-              <button type="button" id="micBtn" class="mic" title="Hold a thought — click to dictate (Whisper)">🎙️</button>
-              <button type="submit" class="act">Send</button>
-            </form>
-          </section>
-
-          <section class="tab" id="tab-plan">
-            <div class="card field">
-              <h3>◇ Plan a task</h3>
-              <label for="planTask">Task</label>
-              <input id="planTask" placeholder="e.g. add caching to the data loader" />
-              <div class="toolbar"><button type="button" class="act" id="planBtn">Build plan</button></div>
-            </div>
-            <div id="planOut"></div>
-          </section>
-
-          <section class="tab" id="tab-review">
-            <div class="card field">
-              <h3>◈ Review code</h3>
-              <label for="reviewCode">Code</label>
-              <textarea id="reviewCode" placeholder="Paste code to review…"></textarea>
-              <div class="toolbar"><button type="button" class="act" id="reviewBtn">Review</button></div>
-            </div>
-            <div id="reviewOut"></div>
-          </section>
-
-          <section class="tab" id="tab-implement">
-            <div class="card field">
-              <h3>❖ Implement</h3>
-              <label for="implInstr">Instruction</label>
-              <input id="implInstr" placeholder="e.g. create a JSON structured logger" />
-              <label for="implPath">Target path (within workspace)</label>
-              <input id="implPath" placeholder="e.g. logger.py" />
-              <div class="toolbar">
-                <label class="check"><input type="checkbox" id="implApprove" /> approve write to disk</label>
-                <button type="button" class="act" id="implBtn">Generate</button>
-              </div>
-            </div>
-            <div id="implOut"></div>
-          </section>
+        <div id="log">
+          <div id="hero">
+            <svg class="logo" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+              <defs>
+                <radialGradient id="hcore" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffffff" /><stop offset="40%" stop-color="#a97bff" /><stop offset="100%" stop-color="#4d8dff" /></radialGradient>
+                <linearGradient id="hring" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4d8dff" /><stop offset="50%" stop-color="#a97bff" /><stop offset="100%" stop-color="#ff7bc5" /></linearGradient>
+              </defs>
+              <g stroke="url(#hring)" stroke-width="1.6" opacity="0.9">
+                <ellipse cx="32" cy="32" rx="26" ry="10"><animateTransform attributeName="transform" type="rotate" from="0 32 32" to="360 32 32" dur="14s" repeatCount="indefinite" /></ellipse>
+                <ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(60 32 32)"><animateTransform attributeName="transform" type="rotate" from="60 32 32" to="420 32 32" dur="18s" repeatCount="indefinite" /></ellipse>
+                <ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(120 32 32)"><animateTransform attributeName="transform" type="rotate" from="120 32 32" to="480 32 32" dur="22s" repeatCount="indefinite" /></ellipse>
+              </g>
+              <circle cx="32" cy="32" r="7" fill="url(#hcore)" />
+            </svg>
+            <h2>What can I engineer for you?</h2>
+            <p>Pick a mode below — chat, plan a task, review code, or implement a file. AURORA switches models intelligently.</p>
+          </div>
         </div>
       </main>
+
+      <div class="composer">
+        <div class="inner">
+          <div class="modes" id="modes">
+            <button type="button" data-mode="chat" class="active">Chat</button>
+            <button type="button" data-mode="plan">Plan</button>
+            <button type="button" data-mode="review">Review</button>
+            <button type="button" data-mode="implement">Implement</button>
+          </div>
+          <div class="attachbar" id="attachBar" hidden></div>
+          <div class="bar">
+            <textarea id="input" rows="1" placeholder="Ask AURORA anything…"></textarea>
+            <input type="file" id="fileInput" multiple hidden accept="image/*,text/*,.md,.py,.js,.ts,.jsx,.tsx,.json,.csv,.html,.css,.yml,.yaml,.xml,.sh" />
+            <button type="button" id="attachBtn" class="iconbtn" title="Attach photo / file" hidden>📎</button>
+            <button type="button" id="micBtn" class="iconbtn" title="Dictate (Whisper)" hidden>🎙️</button>
+            <button type="button" id="sendBtn" class="iconbtn send" title="Send"><svg class="planeicon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+          </div>
+          <div class="implExtras" id="implExtras" hidden>
+            <input id="implPath" placeholder="file name to download, e.g. index.html" />
+          </div>
+          <div class="row2">
+            <span id="modelCS"></span>
+            <span id="effortCS"></span>
+            <span id="personaCS"></span>
+            <button type="button" class="pill" id="keysBtn" title="Connect model API keys">⚙️ Keys</button>
+            <span class="hint">↵ send · ⇧↵ newline</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="keysPanel" hidden>
+      <div class="keys-card">
+        <h3>Connect models</h3>
+        <p class="tag">Search a provider, paste its API key — applied instantly (kept in memory on the server).</p>
+        <input id="keysSearch" placeholder="🔎 Search providers (gemini, groq, openai…)" autocomplete="off" />
+        <div id="keysList" class="keys-list"></div>
+        <div class="keys-actions">
+          <button type="button" class="act" id="keysSave">Save &amp; connect</button>
+          <button type="button" class="iconbtn" id="keysClose" title="Close">✕</button>
+          <span class="tag" id="keysMsg"></span>
+        </div>
+      </div>
     </div>
 
     <script>
       const $ = (s) => document.querySelector(s);
 
-      /* ============ galaxy: starfield + spiral disk + interactive nodes ============ */
+      /* ===== galaxy background (starfield + spiral + constellations + nodes) ===== */
       (() => {
-        const canvas = $("#bg");
-        const ctx = canvas.getContext("2d");
-        const aurora = $("#aurora");
-        const aurora2 = $("#aurora2");
-        // white, white, light-blue, violet, pink, cyan (white weighted for a starry sky)
-        const TINTS = ["255,255,255", "255,255,255", "188,208,255", "169,123,255", "255,123,197", "56,230,255"];
-        // celestial configurations: normalized points + edges connecting them
+        const canvas = $("#bg"), ctx = canvas.getContext("2d");
+        const aurora = $("#aurora"), aurora2 = $("#aurora2");
+        const TINTS = ["255,255,255","255,255,255","188,208,255","169,123,255","255,123,197","56,230,255"];
         const SHAPES = [
-          { pts: [[0, 0], [0.18, 0.06], [0.36, 0.03], [0.52, 0.12], [0.5, 0.3], [0.68, 0.36], [0.66, 0.16]], edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [3, 6]] }, // dipper
-          { pts: [[0.12, 0], [0, 0.32], [0.22, 0.58], [0.52, 0.5], [0.56, 0.2], [0.46, 0], [0.3, 0.28], [0.37, 0.33], [0.44, 0.38]], edges: [[0, 5], [5, 4], [4, 3], [3, 2], [2, 1], [1, 0], [6, 7], [7, 8]] }, // orion
-          { pts: [[0, 0.22], [0.16, 0], [0.32, 0.2], [0.48, 0.02], [0.64, 0.24]], edges: [[0, 1], [1, 2], [2, 3], [3, 4]] }, // cassiopeia W
-          { pts: [[0, 0], [0.42, 0.1], [0.2, 0.44]], edges: [[0, 1], [1, 2], [2, 0]] }, // triangle
-          { pts: [[0.22, 0], [0.22, 0.52], [0, 0.26], [0.44, 0.3]], edges: [[0, 1], [2, 3]] }, // cross
+          { pts: [[0,0],[0.18,0.06],[0.36,0.03],[0.52,0.12],[0.5,0.3],[0.68,0.36],[0.66,0.16]], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[3,6]] },
+          { pts: [[0,0.22],[0.16,0],[0.32,0.2],[0.48,0.02],[0.64,0.24]], edges: [[0,1],[1,2],[2,3],[3,4]] },
+          { pts: [[0,0],[0.42,0.1],[0.2,0.44]], edges: [[0,1],[1,2],[2,0]] },
+          { pts: [[0.22,0],[0.22,0.52],[0,0.26],[0.44,0.3]], edges: [[0,1],[2,3]] },
         ];
-        let w, h, dpr, cx, cy, maxR;
-        let field = [], galaxy = [], nodes = [], shooting = [], consts = [];
+        let w, h, dpr, cx, cy, maxR, field = [], galaxy = [], nodes = [], consts = [], shooting = [];
         let mouse = { x: -999, y: -999 };
-        const t0 = performance.now();
-        const rnd = (a = 1) => Math.random() * a;
-        const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
-        const pick = () => TINTS[(rnd(TINTS.length)) | 0];
-
+        const t0 = performance.now(), rnd = (a=1) => Math.random()*a, gauss = () => (Math.random()+Math.random()+Math.random()-1.5)/1.5, pick = () => TINTS[(rnd(TINTS.length))|0];
         function build() {
-          dpr = Math.min(window.devicePixelRatio || 1, 2);
-          w = canvas.width = innerWidth * dpr;
-          h = canvas.height = innerHeight * dpr;
-          canvas.style.width = innerWidth + "px";
-          canvas.style.height = innerHeight + "px";
-          cx = w * 0.5; cy = h * 0.46; maxR = Math.hypot(w, h) * 0.55;
-
-          // 1) distant starfield filling the whole sky, gentle twinkle
-          const fieldCount = Math.min(620, Math.floor((innerWidth * innerHeight) / 3200));
-          field = Array.from({ length: fieldCount }, () => ({
-            x: rnd(w), y: rnd(h), r: (rnd(1.1) + 0.25) * dpr,
-            a: rnd(0.6) + 0.2, tw: rnd(Math.PI * 2), ts: rnd(0.9) + 0.2, c: pick(),
-          }));
-
-          // 2) galaxy disk: 3 spiral arms, flattened, differential rotation
+          dpr = Math.min(window.devicePixelRatio||1, 2);
+          w = canvas.width = innerWidth*dpr; h = canvas.height = innerHeight*dpr;
+          canvas.style.width = innerWidth+"px"; canvas.style.height = innerHeight+"px";
+          cx = w*0.5; cy = h*0.46; maxR = Math.hypot(w,h)*0.55;
+          field = Array.from({length: Math.min(620, Math.floor(innerWidth*innerHeight/3200))}, () => ({ x: rnd(w), y: rnd(h), r: (rnd(1.1)+0.25)*dpr, a: rnd(0.6)+0.2, tw: rnd(6.28), ts: rnd(0.9)+0.2, c: pick() }));
           const arms = 3, tight = 3.3, flat = 0.52;
-          const galCount = Math.min(560, Math.floor((innerWidth * innerHeight) / 4000));
-          galaxy = Array.from({ length: galCount }, () => {
-            const tt = Math.pow(Math.random(), 0.7);           // denser toward the core
-            const radius = tt * maxR * 0.82;
-            const arm = Math.floor(rnd(arms)) * (Math.PI * 2 / arms);
-            const baseAngle = arm + (radius / maxR) * tight * Math.PI + gauss() * 0.5;
-            return {
-              radius, baseAngle, flat, r: (rnd(1.3) + 0.3) * dpr,
-              a: (1 - tt) * 0.75 + 0.25, tw: rnd(Math.PI * 2), ts: rnd(0.8) + 0.2, c: pick(),
-            };
+          galaxy = Array.from({length: Math.min(560, Math.floor(innerWidth*innerHeight/4000))}, () => {
+            const tt = Math.pow(Math.random(),0.7), radius = tt*maxR*0.82, arm = Math.floor(rnd(arms))*(6.283/arms);
+            return { radius, baseAngle: arm + (radius/maxR)*tight*Math.PI + gauss()*0.5, flat, r: (rnd(1.3)+0.3)*dpr, a: (1-tt)*0.75+0.25, tw: rnd(6.28), ts: rnd(0.8)+0.2, c: pick() };
           });
-
-          // 3) bright interactive nodes that react to the cursor
-          const nodeCount = Math.min(60, Math.floor((innerWidth * innerHeight) / 26000));
-          nodes = Array.from({ length: nodeCount }, () => ({
-            x: rnd(w), y: rnd(h), vx: (rnd(1) - 0.5) * 0.2 * dpr, vy: -(rnd(0.3) + 0.05) * dpr,
-            r: (rnd(1.6) + 0.9) * dpr, c: TINTS[2 + ((rnd(4)) | 0)],
-          }));
-
-          // 4) connected celestial configurations placed across the sky
-          const cCount = Math.min(6, Math.max(3, Math.floor(innerWidth / 360)));
+          nodes = Array.from({length: Math.min(60, Math.floor(innerWidth*innerHeight/26000))}, () => ({ x: rnd(w), y: rnd(h), vx: (rnd(1)-0.5)*0.2*dpr, vy: -(rnd(0.3)+0.05)*dpr, r: (rnd(1.6)+0.9)*dpr, c: TINTS[2+((rnd(4))|0)] }));
           consts = [];
-          for (let k = 0; k < cCount; k++) {
-            const shape = SHAPES[(rnd(SHAPES.length)) | 0];
-            const s = Math.min(w, h) * (0.13 + rnd(0.12));
-            const ox = rnd(w * 0.78) + w * 0.11;
-            const oy = rnd(h * 0.78) + h * 0.11;
-            const rot = (rnd(1) - 0.5) * 1.2, ca = Math.cos(rot), sa = Math.sin(rot);
-            const pts = shape.pts.map(([px, py]) => {
-              const X = (px - 0.3) * s, Y = (py - 0.25) * s;
-              return {
-                x: ox + X * ca - Y * sa, y: oy + X * sa + Y * ca,
-                r: (rnd(1.2) + 1.1) * dpr, tw: rnd(Math.PI * 2), ts: rnd(0.7) + 0.3,
-              };
-            });
-            consts.push({ pts, edges: shape.edges, tw: rnd(Math.PI * 2), ts: rnd(0.35) + 0.15 });
+          for (let k=0; k<Math.min(6, Math.max(3, Math.floor(innerWidth/360))); k++) {
+            const shape = SHAPES[(rnd(SHAPES.length))|0], s = Math.min(w,h)*(0.13+rnd(0.12));
+            const ox = rnd(w*0.78)+w*0.11, oy = rnd(h*0.78)+h*0.11, rot = (rnd(1)-0.5)*1.2, ca = Math.cos(rot), sa = Math.sin(rot);
+            const pts = shape.pts.map(([px,py]) => { const X=(px-0.3)*s, Y=(py-0.25)*s; return { x: ox+X*ca-Y*sa, y: oy+X*sa+Y*ca, r: (rnd(1.2)+1.1)*dpr, tw: rnd(6.28), ts: rnd(0.7)+0.3 }; });
+            consts.push({ pts, edges: shape.edges, tw: rnd(6.28), ts: rnd(0.35)+0.15 });
           }
         }
-
-        const star = (x, y, r, a, c) => { ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fillStyle = `rgba(${c},${a})`; ctx.fill(); };
-
+        const star = (x,y,r,a,c) => { ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fillStyle = `rgba(${c},${a})`; ctx.fill(); };
         function step(now) {
-          const t = (now - t0) / 1000;
-          ctx.clearRect(0, 0, w, h);
-
-          // glowing galactic core
-          const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR * 0.5);
-          core.addColorStop(0, "rgba(205,195,255,0.30)");
-          core.addColorStop(0.4, "rgba(150,130,255,0.10)");
-          core.addColorStop(1, "rgba(0,0,0,0)");
-          ctx.fillStyle = core; ctx.fillRect(0, 0, w, h);
-
-          for (const s of field) star(s.x, s.y, s.r, s.a * (0.55 + 0.45 * Math.sin(t * s.ts + s.tw)), s.c);
-
-          for (const g of galaxy) {
-            const rot = t * 0.06 * (1 / (0.35 + g.radius / maxR)); // inner spins faster
-            const ang = g.baseAngle + rot;
-            const x = cx + Math.cos(ang) * g.radius;
-            const y = cy + Math.sin(ang) * g.radius * g.flat;
-            star(x, y, g.r, g.a * (0.6 + 0.4 * Math.sin(t * g.ts + g.tw)), g.c);
-          }
-
-          // connected celestial configurations (constellations)
+          const t = (now-t0)/1000; ctx.clearRect(0,0,w,h);
+          const core = ctx.createRadialGradient(cx,cy,0,cx,cy,maxR*0.5);
+          core.addColorStop(0,"rgba(205,195,255,0.3)"); core.addColorStop(0.4,"rgba(150,130,255,0.1)"); core.addColorStop(1,"rgba(0,0,0,0)");
+          ctx.fillStyle = core; ctx.fillRect(0,0,w,h);
+          for (const s of field) star(s.x,s.y,s.r, s.a*(0.55+0.45*Math.sin(t*s.ts+s.tw)), s.c);
+          for (const g of galaxy) { const rot = t*0.06*(1/(0.35+g.radius/maxR)), ang = g.baseAngle+rot; star(cx+Math.cos(ang)*g.radius, cy+Math.sin(ang)*g.radius*g.flat, g.r, g.a*(0.6+0.4*Math.sin(t*g.ts+g.tw)), g.c); }
           for (const cst of consts) {
-            const breathe = 0.55 + 0.45 * Math.sin(t * cst.ts + cst.tw);
-            ctx.lineWidth = dpr * 0.9;
-            for (const [i, j] of cst.edges) {
-              const a = cst.pts[i], b = cst.pts[j];
-              const grd = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
-              grd.addColorStop(0, `rgba(120,150,255,${0.3 * breathe})`);
-              grd.addColorStop(1, `rgba(205,150,255,${0.3 * breathe})`);
-              ctx.strokeStyle = grd;
-              ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-            }
-            for (const p of cst.pts) {
-              const a = 0.7 + 0.3 * Math.sin(t * p.ts + p.tw);
-              star(p.x, p.y, p.r * 2.6, 0.12 * a, "188,208,255"); // glow
-              star(p.x, p.y, p.r, a, "255,255,255");
-            }
+            const br = 0.55+0.45*Math.sin(t*cst.ts+cst.tw); ctx.lineWidth = dpr*0.9;
+            for (const [i,j] of cst.edges) { const a=cst.pts[i], b=cst.pts[j], gr=ctx.createLinearGradient(a.x,a.y,b.x,b.y); gr.addColorStop(0,`rgba(120,150,255,${0.3*br})`); gr.addColorStop(1,`rgba(205,150,255,${0.3*br})`); ctx.strokeStyle=gr; ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke(); }
+            for (const p of cst.pts) { const a=0.7+0.3*Math.sin(t*p.ts+p.tw); star(p.x,p.y,p.r*2.6,0.12*a,"188,208,255"); star(p.x,p.y,p.r,a,"255,255,255"); }
           }
-
-          const link = 120 * dpr;
+          const link = 120*dpr;
           for (const p of nodes) {
-            if (mouse.x > 0) {
-              const dx = mouse.x * dpr - p.x, dy = mouse.y * dpr - p.y;
-              const d2 = dx * dx + dy * dy, R = 170 * dpr;
-              if (d2 < R * R) { const d = Math.sqrt(d2) + 1, f = (1 - d / R) * 0.07; p.vx += dx / d * f; p.vy += dy / d * f; }
-            }
-            p.x += p.vx; p.y += p.vy; p.vx *= 0.985; p.vy *= 0.985;
-            if (p.y < -10) p.y = h + 10; if (p.y > h + 10) p.y = -10;
-            if (p.x < -10) p.x = w + 10; if (p.x > w + 10) p.x = -10;
-            star(p.x, p.y, p.r * 2.4, 0.1, p.c); // glow
-            star(p.x, p.y, p.r, 0.95, p.c);
+            if (mouse.x>0) { const dx=mouse.x*dpr-p.x, dy=mouse.y*dpr-p.y, d2=dx*dx+dy*dy, R=170*dpr; if (d2<R*R) { const d=Math.sqrt(d2)+1, f=(1-d/R)*0.07; p.vx+=dx/d*f; p.vy+=dy/d*f; } }
+            p.x+=p.vx; p.y+=p.vy; p.vx*=0.985; p.vy*=0.985;
+            if (p.y<-10)p.y=h+10; if(p.y>h+10)p.y=-10; if(p.x<-10)p.x=w+10; if(p.x>w+10)p.x=-10;
+            star(p.x,p.y,p.r*2.4,0.1,p.c); star(p.x,p.y,p.r,0.95,p.c);
           }
-          for (let i = 0; i < nodes.length; i++)
-            for (let j = i + 1; j < nodes.length; j++) {
-              const a = nodes[i], b = nodes[j], d = Math.hypot(a.x - b.x, a.y - b.y);
-              if (d < link) {
-                ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
-                ctx.strokeStyle = `rgba(160,150,255,${(1 - d / link) * 0.16})`; ctx.lineWidth = dpr * 0.6; ctx.stroke();
-              }
-            }
-
-          if (Math.random() < 0.004 && shooting.length < 2)
-            shooting.push({ x: rnd(w * 0.7) + w * 0.15, y: rnd(h * 0.4), vx: (rnd(3) + 4) * dpr, vy: (rnd(1.5) + 1) * dpr, life: 1 });
-          for (const sh of shooting) {
-            sh.x += sh.vx; sh.y += sh.vy; sh.life -= 0.012;
-            const grd = ctx.createLinearGradient(sh.x, sh.y, sh.x - sh.vx * 3, sh.y - sh.vy * 3);
-            grd.addColorStop(0, `rgba(255,255,255,${Math.max(sh.life, 0)})`);
-            grd.addColorStop(1, "rgba(255,255,255,0)");
-            ctx.strokeStyle = grd; ctx.lineWidth = 1.6 * dpr;
-            ctx.beginPath(); ctx.moveTo(sh.x, sh.y); ctx.lineTo(sh.x - sh.vx * 3, sh.y - sh.vy * 3); ctx.stroke();
-          }
-          shooting = shooting.filter((s) => s.life > 0 && s.x < w + 40 && s.y < h + 40);
-
+          for (let i=0;i<nodes.length;i++) for (let j=i+1;j<nodes.length;j++){ const a=nodes[i],b=nodes[j],d=Math.hypot(a.x-b.x,a.y-b.y); if(d<link){ ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.strokeStyle=`rgba(160,150,255,${(1-d/link)*0.16})`; ctx.lineWidth=dpr*0.6; ctx.stroke(); } }
+          if (Math.random()<0.004 && shooting.length<2) shooting.push({ x: rnd(w*0.7)+w*0.15, y: rnd(h*0.4), vx: (rnd(3)+4)*dpr, vy: (rnd(1.5)+1)*dpr, life: 1 });
+          for (const sh of shooting) { sh.x+=sh.vx; sh.y+=sh.vy; sh.life-=0.012; const gr=ctx.createLinearGradient(sh.x,sh.y,sh.x-sh.vx*3,sh.y-sh.vy*3); gr.addColorStop(0,`rgba(255,255,255,${Math.max(sh.life,0)})`); gr.addColorStop(1,"rgba(255,255,255,0)"); ctx.strokeStyle=gr; ctx.lineWidth=1.6*dpr; ctx.beginPath(); ctx.moveTo(sh.x,sh.y); ctx.lineTo(sh.x-sh.vx*3,sh.y-sh.vy*3); ctx.stroke(); }
+          shooting = shooting.filter((s)=>s.life>0 && s.x<w+40 && s.y<h+40);
           requestAnimationFrame(step);
         }
-
         addEventListener("resize", build);
-        addEventListener("pointermove", (e) => {
-          mouse.x = e.clientX; mouse.y = e.clientY;
-          const px = (e.clientX / innerWidth - 0.5), py = (e.clientY / innerHeight - 0.5);
-          aurora.style.transform = `translate3d(${px * 30}px, ${py * 30}px, 0)`;
-          aurora2.style.transform = `translate3d(${px * -22}px, ${py * -22}px, 0)`;
-        });
-        addEventListener("pointerleave", () => { mouse.x = -999; });
+        addEventListener("pointermove", (e) => { mouse.x=e.clientX; mouse.y=e.clientY; const px=(e.clientX/innerWidth-0.5), py=(e.clientY/innerHeight-0.5); aurora.style.transform=`translate3d(${px*30}px,${py*30}px,0)`; aurora2.style.transform=`translate3d(${px*-22}px,${py*-22}px,0)`; });
+        addEventListener("pointerleave", () => { mouse.x=-999; });
         build(); requestAnimationFrame(step);
       })();
 
-      /* ============ tabs ============ */
-      document.querySelectorAll("nav button").forEach((b) => {
-        b.addEventListener("click", () => {
-          document.querySelectorAll("nav button").forEach((x) => x.classList.remove("active"));
-          document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
-          b.classList.add("active"); $("#tab-" + b.dataset.tab).classList.add("active");
-        });
-      });
+      /* ===== thinking loader + space words ===== */
+      const SPACE_WORDS = ["Orbiting","Stargazing","Warping","Charting the void","Aligning constellations","Traversing the nebula","Consulting the cosmos","Entering hyperspace","Calibrating telescopes","Decoding starlight","Bending spacetime","Summoning supernovae","Mapping the galaxy","Chasing photons","Escaping gravity","Folding wormholes","Scanning the horizon","Reticulating stardust"];
+      const randWord = () => SPACE_WORDS[(Math.random()*SPACE_WORDS.length)|0];
+      const thinking = () =>
+        '<div class="thinking"><svg class="loader" viewBox="0 0 64 64" fill="none">' +
+        '<defs><radialGradient id="lc" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffffff"/><stop offset="45%" stop-color="#a97bff"/><stop offset="100%" stop-color="#4d8dff"/></radialGradient>' +
+        '<linearGradient id="lr" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4d8dff"/><stop offset="50%" stop-color="#a97bff"/><stop offset="100%" stop-color="#ff7bc5"/></linearGradient></defs>' +
+        '<g stroke="url(#lr)" stroke-width="2.4" opacity="0.95">' +
+        '<ellipse cx="32" cy="32" rx="26" ry="10"><animateTransform attributeName="transform" type="rotate" from="0 32 32" to="360 32 32" dur="2.2s" repeatCount="indefinite"/></ellipse>' +
+        '<ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(60 32 32)"><animateTransform attributeName="transform" type="rotate" from="60 32 32" to="420 32 32" dur="2.8s" repeatCount="indefinite"/></ellipse>' +
+        '<ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(120 32 32)"><animateTransform attributeName="transform" type="rotate" from="120 32 32" to="480 32 32" dur="3.4s" repeatCount="indefinite"/></ellipse></g>' +
+        '<circle class="lcore" cx="32" cy="32" r="7" fill="url(#lc)"/></svg>' +
+        `<span class="tlabel">${randWord()}…</span></div>`;
+      setInterval(() => { document.querySelectorAll(".tlabel").forEach((el) => (el.textContent = randWord()+"…")); }, 1900);
 
-      /* ============ status + providers ============ */
-      async function boot() {
+      /* ===== helpers ===== */
+      const log = $("#log");
+      const scrollDown = () => { const m = document.querySelector("main"); if (m) m.scrollTop = m.scrollHeight; };
+      const clearHero = () => { const h = $("#hero"); if (h) h.remove(); };
+      function addMsg(who, cls) { clearHero(); const d = document.createElement("div"); d.className = "msg " + (cls||""); d.innerHTML = '<div class="who"></div><div class="bubble"></div>'; d.querySelector(".who").textContent = who; log.appendChild(d); scrollDown(); return d.querySelector(".bubble"); }
+      function addSlot() { clearHero(); const d = document.createElement("div"); log.appendChild(d); scrollDown(); return d; }
+      // pretty, short model name (drop provider prefix + long suffixes)
+      const shortModel = (m) => (m || "")
+        .split("/").pop()
+        .replace(/-(latest|versatile|instruct)$/i, "")
+        .replace(/-\d+b-\d+e.*$/i, "");
+      const setEngine = (p, m) => { $("#engine").textContent = `✨ ${shortModel(m)}`; };
+      async function refreshCapabilities() {
+        try {
+          const cap = await (await fetch("/capabilities")).json();
+          $("#attachBtn").hidden = !cap.vision;
+          $("#micBtn").hidden = !cap.audio;
+        } catch { /* leave hidden */ }
+      }
+      function copyBtn(text) { const b = document.createElement("button"); b.type = "button"; b.className = "copy"; b.textContent = "copy"; b.onclick = () => { navigator.clipboard.writeText(text); b.textContent = "copied"; setTimeout(() => (b.textContent = "copy"), 1200); }; return b; }
+
+      /* ===== download generated files to the user's device ===== */
+      const MIME = { html: "text/html", htm: "text/html", css: "text/css", js: "text/javascript", ts: "text/plain", json: "application/json", py: "text/x-python", md: "text/markdown", txt: "text/plain", csv: "text/csv", xml: "application/xml", yml: "text/yaml", yaml: "text/yaml", sh: "text/x-shellscript" };
+      const mimeFor = (name) => MIME[(name.split(".").pop() || "").toLowerCase()] || "text/plain";
+      async function downloadFile(name, text) {
+        name = (name || "aurora.txt").split(/[\\/]/).pop();  // filename only
+        try {
+          if (window.showSaveFilePicker) {  // desktop Chromium: let the user choose the path
+            const handle = await window.showSaveFilePicker({ suggestedName: name });
+            const w = await handle.createWritable(); await w.write(text); await w.close();
+            return;
+          }
+        } catch (e) { if (e.name === "AbortError") return; }
+        // fallback (mobile / Firefox / Safari): download into the device's Downloads
+        const blob = new Blob([text], { type: mimeFor(name) + ";charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a"); a.href = url; a.download = name;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      }
+      function downloadBtn(name, text) { const b = document.createElement("button"); b.type = "button"; b.className = "dl"; b.textContent = "⬇️ download"; b.onclick = () => downloadFile(name, text); return b; }
+      const esc = (s) => s.replace(/[&<]/g, (c) => ({ "&": "&amp;", "<": "&lt;" }[c]));
+      /* tiny, safe markdown -> HTML so replies render pretty (no ** left over) */
+      function mdToHtml(src) {
+        const blocks = [];
+        // fenced code blocks (protect contents from other rules)
+        src = String(src).replace(/```(\w*)\n?([\s\S]*?)```/g, (_, _lang, code) => {
+          blocks.push(`<pre class="code">${esc(code.replace(/\n$/, ""))}</pre>`);
+          return `\u0000${blocks.length - 1}\u0000`;
+        });
+        let h = esc(src);
+        h = h.replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`);        // inline code
+        h = h.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");           // **bold**
+        h = h.replace(/__([^_]+)__/g, "<strong>$1</strong>");               // __bold__
+        h = h.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");           // *italic*
+        h = h.replace(/^\s*#{1,6}\s+(.+)$/gm, "<strong>$1</strong>");       // # heading
+        h = h.replace(
+          /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+          '<a href="$2" target="_blank" rel="noopener">$1</a>'
+        );
+        // group consecutive bullet / numbered lines into a list
+        h = h.replace(/^(?:\s*(?:[-*]|\d+\.)\s+.+(?:\n|$))+/gm, (m) => {
+          const items = m.trim().split(/\n/)
+            .map((l) => `<li>${l.replace(/^\s*(?:[-*]|\d+\.)\s+/, "")}</li>`).join("");
+          return `<ul class="md">${items}</ul>`;
+        });
+        h = h.replace(/\n{2,}/g, "<br><br>").replace(/\n/g, "<br>");        // paragraphs
+        h = h.replace(/(<\/(?:ul|pre)>)(?:<br>)+/g, "$1");                  // trim breaks after blocks
+        return h.replace(/\u0000(\d+)\u0000/g, (_, i) => blocks[+i]);
+      }
+      /* turn technical errors into calm, human messages (and never leak details) */
+      function friendly(code, message) {
+        const map = {
+          router_error: "No AI model is connected yet — open ⚙ Keys to add one (it's free).",
+          provider_request_error: "The model is busy right now. Please try again in a few seconds.",
+          provider_response_error: "The model gave an unexpected response. Please try again.",
+          transcription_error: "Couldn't understand the audio — please try again.",
+          permission_denied: "That action isn't allowed here.",
+          confirmation_required: "That needs your confirmation first.",
+          validation_error: "Please check your input and try again.",
+          tool_error: "That step couldn't be completed.",
+        };
+        if (code && map[code]) return map[code];
+        if (/429|rate|quota|too many|unavailable/i.test(message || "")) return "The model is busy (rate limit) — please wait a few seconds and try again.";
+        return "Something went wrong. Please try again.";
+      }
+      let modelValue = "";
+      const routing = () => (modelValue ? { prefer_provider: modelValue } : {});
+
+      /* custom popup dropdown (replaces native <select>) */
+      function customSelect(mount, options, current, onSelect) {
+        mount.classList.add("cs");
+        mount.innerHTML = "";
+        const trigger = document.createElement("button");
+        trigger.type = "button"; trigger.className = "pill cs-trigger";
+        const menu = document.createElement("div"); menu.className = "cs-menu"; menu.hidden = true;
+        const labelFor = (v) => (options.find((o) => o.value === v) || options[0]).label;
+        const setLabel = () => {
+          const parts = labelFor(current).split(" ");
+          const lead = parts[0] || "";                                   // emoji / icon
+          const word = parts[1] ? " " + parts[1] : "";                   // first word
+          const rest = parts.length > 2 ? " " + parts.slice(2).join(" ") : ""; // extras
+          trigger.innerHTML =
+            `<span class="cs-lead">${lead}</span>` +
+            `<span class="cs-word">${word}</span>` +
+            `<span class="cs-rest">${rest}</span>` +
+            ` <span class="cs-caret">▾</span>`;
+        };
+        const close = () => { menu.hidden = true; mount.classList.remove("open"); };
+        const openMenu = () => {
+          document.querySelectorAll(".cs-menu").forEach((m) => (m.hidden = true));
+          document.querySelectorAll(".cs").forEach((c) => c.classList.remove("open"));
+          menu.innerHTML = "";
+          options.forEach((o) => {
+            const b = document.createElement("button");
+            b.type = "button"; b.className = "cs-opt" + (o.value === current ? " sel" : "");
+            b.textContent = o.label;
+            b.onclick = (e) => { e.stopPropagation(); current = o.value; setLabel(); close(); onSelect(o.value); };
+            menu.appendChild(b);
+          });
+          menu.hidden = false; mount.classList.add("open");
+          // keep the popup fully on-screen (body clips overflow)
+          menu.style.left = "0px";
+          const pad = 10, vw = document.documentElement.clientWidth;
+          const r = menu.getBoundingClientRect();
+          let shift = 0;
+          if (r.right > vw - pad) shift = (vw - pad) - r.right;   // pull left off right edge
+          if (r.left + shift < pad) shift = pad - r.left;         // don't cross left edge
+          if (shift) menu.style.left = Math.round(shift) + "px";
+        };
+        trigger.onclick = (e) => { e.stopPropagation(); menu.hidden ? openMenu() : close(); };
+        document.addEventListener("click", close);
+        mount.appendChild(trigger); mount.appendChild(menu);
+        setLabel();
+      }
+
+      /* ===== boot: status + models ===== */
+      (async () => {
         try {
           const health = await (await fetch("/health")).json();
-          const s = $("#status");
           $("#statusText").textContent = health.status === "ok" ? "online" : "degraded";
-          s.classList.toggle("up", health.status === "ok");
+          $("#status").classList.toggle("up", health.status === "ok");
           const provs = (await (await fetch("/providers")).json()).providers || [];
-          const sel = $("#provider");
-          sel.innerHTML = '<option value="">⚡ Auto-route</option>';
-          for (const p of provs) { const o = document.createElement("option"); o.value = o.textContent = p; sel.appendChild(o); }
+          const opts = [{ value: "", label: "✨ Auto (smart routing)" }, ...provs.map((p) => ({ value: p, label: p }))];
+          customSelect($("#modelCS"), opts, "", (v) => { modelValue = v; });
         } catch { $("#statusText").textContent = "offline"; }
-      }
-      const routing = () => ($("#provider").value ? { prefer_provider: $("#provider").value } : {});
-      // reflect the engine the router auto-selected
-      const setEngine = (p, m) => { $("#engine").textContent = `⚡ ${p} · ${m}`; };
-      // a copy-to-clipboard button bound to given text
-      function copyBtn(text) {
-        const b = document.createElement("button");
-        b.type = "button"; b.className = "copy"; b.textContent = "copy";
-        b.onclick = () => { navigator.clipboard.writeText(text); b.textContent = "copied"; setTimeout(() => (b.textContent = "copy"), 1200); };
-        return b;
-      }
+        refreshCapabilities();
+      })();
 
-      /* ============ voice input (Whisper) ============ */
+      /* ===== responsive placeholder (shorter on small screens) ===== */
       (() => {
-        const micBtn = $("#micBtn");
-        const input = $("#chatInput");
+        const input = $("#input"), mq = window.matchMedia("(max-width: 640px)");
+        const apply = () => { input.placeholder = mq.matches ? "Ask AURORA…" : "Ask AURORA anything…"; };
+        apply(); mq.addEventListener("change", apply);
+      })();
+
+      /* ===== voice (Whisper) ===== */
+      (() => {
+        const micBtn = $("#micBtn"), input = $("#input");
         let recorder = null, chunks = [], recording = false;
         micBtn.addEventListener("click", async () => {
           if (recording) { recorder.stop(); return; }
-          if (!navigator.mediaDevices?.getUserMedia) { alert("Microphone not supported in this browser."); return; }
+          if (!navigator.mediaDevices?.getUserMedia) { alert("Microphone not supported."); return; }
           try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             chunks = []; recorder = new MediaRecorder(stream);
             recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
             recorder.onstop = async () => {
-              stream.getTracks().forEach((t) => t.stop());
-              recording = false; micBtn.classList.remove("rec"); micBtn.textContent = "🎙️";
-              const blob = new Blob(chunks, { type: "audio/webm" });
-              const prev = input.placeholder; input.placeholder = "transcribing…"; input.disabled = true;
-              try {
-                const fd = new FormData(); fd.append("audio", blob, "clip.webm");
-                const res = await fetch("/transcribe", { method: "POST", body: fd });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.message || "transcription failed");
-                const t = (data.text || "").trim();
-                input.value = (input.value ? input.value + " " : "") + t;
-                input.placeholder = prev;
-              } catch (e) {
-                input.placeholder = "⚠ " + e.message;
-                setTimeout(() => (input.placeholder = prev), 3000);
-              } finally { input.disabled = false; input.focus(); }
+              stream.getTracks().forEach((t) => t.stop()); recording = false; micBtn.classList.remove("rec"); micBtn.textContent = "🎙️";
+              const blob = new Blob(chunks, { type: "audio/webm" }); const prev = input.placeholder; input.placeholder = "transcribing…"; input.disabled = true;
+              try { const fd = new FormData(); fd.append("audio", blob, "clip.webm"); const res = await fetch("/transcribe", { method: "POST", body: fd }); const data = await res.json(); if (!res.ok) throw new Error(friendly(data.code, data.message)); input.value = (input.value ? input.value+" " : "") + (data.text||"").trim(); input.placeholder = prev; autoGrow(); }
+              catch (e) { input.placeholder = "⚠ " + e.message; setTimeout(() => (input.placeholder = prev), 3000); }
+              finally { input.disabled = false; input.focus(); }
             };
-            recorder.start(); recording = true;
-            micBtn.classList.add("rec"); micBtn.textContent = "⏺";
+            recorder.start(); recording = true; micBtn.classList.add("rec"); micBtn.textContent = "⏺";
           } catch (e) { alert("Microphone unavailable: " + e.message); }
         });
       })();
 
-      /* ============ chat over WebSocket ============ */
+      /* ===== chat over WebSocket ===== */
       const sessionId = "web-" + Math.random().toString(36).slice(2);
       let ws = null, pending = null;
-      function addMsg(who, cls) {
-        const div = document.createElement("div");
-        div.className = "msg " + (cls || "");
-        div.innerHTML = '<div class="who"></div><div class="bubble"></div>';
-        div.querySelector(".who").textContent = who;
-        $("#chatLog").appendChild(div);
-        $("#chatLog").scrollTop = $("#chatLog").scrollHeight;
-        return div.querySelector(".bubble");
-      }
       function connect() {
         const proto = location.protocol === "https:" ? "wss" : "ws";
         ws = new WebSocket(`${proto}://${location.host}/ws/chat`);
         ws.onmessage = (ev) => {
-          const m = JSON.parse(ev.data);
-          if (!pending) return;
-          if (m.type === "token") {
-            if (pending.dataset.pending) { pending.textContent = ""; delete pending.dataset.pending; }
-            pending.classList.add("cursor");
-            pending.textContent += (pending.textContent ? " " : "") + m.content;
-            $("#chatLog").scrollTop = $("#chatLog").scrollHeight;
-          } else if (m.type === "done") {
-            pending.classList.remove("cursor");
-            const meta = document.createElement("div");
-            meta.className = "meta"; meta.textContent = `${m.provider} · ${m.model}`;
-            meta.appendChild(copyBtn(pending.textContent));
-            pending.parentElement.appendChild(meta);
-            setEngine(m.provider, m.model); pending = null;
-          } else if (m.type === "error") {
-            pending.classList.remove("cursor");
-            pending.parentElement.classList.add("err");
-            pending.textContent = `${m.code}: ${m.message}`; pending = null;
-          }
+          const m = JSON.parse(ev.data); if (!pending) return;
+          if (m.type === "token") { if (pending.dataset.pending) { pending.textContent = ""; delete pending.dataset.pending; } pending.classList.add("cursor"); pending.textContent += (pending.textContent ? " " : "") + m.content; scrollDown(); }
+          else if (m.type === "done") { pending.classList.remove("cursor"); const raw = m.content || pending.textContent; pending.classList.add("md"); pending.innerHTML = mdToHtml(raw); const meta = document.createElement("div"); meta.className = "meta"; meta.textContent = `${m.provider} · ${m.model}`; meta.appendChild(copyBtn(raw)); pending.parentElement.appendChild(meta); setEngine(m.provider, m.model); pending = null; scrollDown(); }
+          else if (m.type === "error") { pending.classList.remove("cursor"); pending.parentElement.classList.add("err"); pending.textContent = friendly(m.code, m.message); pending = null; scrollDown(); }
         };
         ws.onclose = () => setTimeout(connect, 1500);
       }
       connect();
-      $("#chatForm").addEventListener("submit", (e) => {
-        e.preventDefault();
-        const text = $("#chatInput").value.trim();
-        if (!text || !ws || ws.readyState !== 1) return;
-        addMsg("you", "user").textContent = text;
-        $("#chatInput").value = "";
-        pending = addMsg("aurora");
-        pending.innerHTML = THINKING; pending.dataset.pending = "1";
-        ws.send(JSON.stringify({ session_id: sessionId, message: text, ...routing() }));
-      });
-
-      /* ============ galaxy "thinking" indicator ============ */
-      const THINKING =
-        '<div class="thinking"><span class="stars"><i></i><i></i><i></i><i></i><i></i></span>' +
-        '<span class="tlabel">thinking…</span></div>';
-
-      /* ============ POST helper ============ */
-      async function post(path, body, outEl, render) {
-        outEl.innerHTML = '<div class="card">' + THINKING + "</div>";
-        try {
-          const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-          const data = await res.json();
-          if (!res.ok) throw new Error(`${data.code}: ${data.message}`);
-          outEl.innerHTML = ""; render(data);
-        } catch (e) { outEl.innerHTML = `<div class="card"><pre class="bad">${e.message}</pre></div>`; }
+      function chatSend(sendText, displayText, images) {
+        addMsg("you", "user").textContent = displayText;
+        pending = addMsg("aurora"); pending.innerHTML = thinking(); pending.dataset.pending = "1";
+        const payload = { session_id: sessionId, message: sendText, ...routing() };
+        if (images && images.length) payload.images = images;
+        ws.send(JSON.stringify(payload));
       }
-      const esc = (s) => s.replace(/[&<]/g, (c) => ({ "&": "&amp;", "<": "&lt;" }[c]));
 
-      $("#planBtn").addEventListener("click", () => {
-        const task = $("#planTask").value.trim(); if (!task) return;
-        post("/plan", { task, ...routing() }, $("#planOut"), (d) => {
-          setEngine(d.provider, d.model);
-          const steps = d.plan.steps.map((s) => `<li>${esc(s.description)}</li>`).join("");
-          $("#planOut").innerHTML =
-            `<div class="card"><h3>Plan <span class="tag">· ${d.provider} / ${d.model}</span></h3>` +
-            `<ul class="steps">${steps || "<li>(no steps)</li>"}</ul>` +
-            `<div class="tag" style="margin-top:.6rem">context: ${d.context_files.join(", ") || "none"}</div></div>`;
-        });
+      /* ===== POST for plan/review/implement ===== */
+      async function post(path, body, outEl, render) {
+        outEl.innerHTML = '<div class="card">' + thinking() + "</div>"; scrollDown();
+        try { const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); const data = await res.json(); if (!res.ok) throw new Error(friendly(data.code, data.message)); render(outEl, data); scrollDown(); }
+        catch (e) { outEl.innerHTML = `<div class="card"><span class="tag bad">${esc(e.message)}</span></div>`; scrollDown(); }
+      }
+      function renderPlan(outEl, d) { setEngine(d.provider, d.model); const steps = d.plan.steps.map((s) => `<li>${esc(s.description)}</li>`).join(""); outEl.innerHTML = `<div class="card"><h3>Plan <span class="tag">· ${d.provider} / ${d.model}</span></h3><ul class="steps">${steps || "<li>(no steps)</li>"}</ul><div class="tag" style="margin-top:.6rem">context: ${d.context_files.join(", ") || "none"}</div></div>`; }
+      function renderReview(outEl, d) { setEngine(d.provider, d.model); const items = d.result.findings.map((f) => `<div class="chip">${esc(f)}</div>`).join(""); outEl.innerHTML = `<div class="card"><h3>Review <span class="tag">· ${d.provider} / ${d.model}</span></h3><div class="chips">${items || '<div class="chip">(no findings)</div>'}</div><div class="tag" style="margin-top:.7rem">summary: ${esc(d.result.summary)}</div></div>`; }
+      function renderImplement(outEl, d) { setEngine(d.provider, d.model); outEl.innerHTML = `<div class="card"><h3>${esc(d.proposed.path)} <span class="tag">· ${d.provider} / ${d.model}</span></h3><pre>${esc(d.proposed.content)}</pre></div>`; const h = outEl.querySelector("h3"); if (h) { h.appendChild(copyBtn(d.proposed.content)); h.appendChild(downloadBtn(d.proposed.path, d.proposed.content)); } }
+
+      /* ===== mode + composer ===== */
+      let mode = "chat";
+      const PLACEHOLDER = { chat: "Ask AURORA anything…", plan: "Describe a task to plan…", review: "Paste code to review…", implement: "Describe what to build…" };
+      function setMode(m) { mode = m; document.querySelectorAll("#modes button").forEach((b) => b.classList.toggle("active", b.dataset.mode === m)); $("#input").placeholder = PLACEHOLDER[m]; $("#implExtras").hidden = m !== "implement"; $("#input").focus(); }
+      document.querySelectorAll("#modes button").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.mode)));
+
+      const input = $("#input");
+      const autoGrow = () => { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 144) + "px"; };
+      input.addEventListener("input", autoGrow);
+
+      /* ===== effort dial (structured multi-agent) ===== */
+      let effort = "fast";
+      customSelect(
+        $("#effortCS"),
+        [
+          { value: "fast", label: "⚡ Fast · 1 agent" },
+          { value: "balanced", label: "⚖️ Balanced · small team" },
+          { value: "max", label: "🔬 Max · full team" },
+        ],
+        "fast",
+        (v) => { effort = v; }
+      );
+      const EFFORT_LABEL = { fast: "⚡ Fast", balanced: "⚖ Balanced", max: "🔬 Max" };
+      function runTeam(task, outEl, filename) {
+        outEl.innerHTML = '<div class="card">' + thinking() + "</div>"; scrollDown();
+        fetch("/collaborate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ task, mode, effort }) })
+          .then((r) => r.json().then((d) => ({ ok: r.ok, d })))
+          .then(({ ok, d }) => {
+            if (!ok) throw new Error(friendly(d.code, d.message));
+            const roster = d.roster.map((x) => `<span class="chip">${esc(x)}</span>`).join("");
+            outEl.innerHTML = `<div class="card"><h3>${EFFORT_LABEL[effort]} · team</h3><div class="roster">${roster}</div><pre>${esc(d.content)}</pre></div>`;
+            const h = outEl.querySelector("h3");
+            if (h) { h.appendChild(copyBtn(d.content)); if (filename) h.appendChild(downloadBtn(filename, d.content)); }
+            scrollDown();
+          })
+          .catch((e) => { outEl.innerHTML = `<div class="card"><span class="tag bad">${esc(e.message)}</span></div>`; scrollDown(); });
+      }
+
+      function submit() {
+        const raw = input.value.trim();
+        if (!raw && !attachments.length) return;
+        const fileText = attachments.filter((a) => a.kind === "file").map((a) => `\n\n[Attached: ${a.name}]\n${a.text}`).join("");
+        const images = attachments.filter((a) => a.kind === "image").map((a) => a.dataUrl);
+        const body = raw + fileText;
+        const display = raw + (attachments.length ? `  · ${attachments.length} attachment${attachments.length > 1 ? "s" : ""}` : "");
+
+        if (effort !== "fast") {
+          let task = withPersona(body), filename = null;
+          if (mode === "implement") { const p = $("#implPath").value.trim(); if (p) { task += `  (target file: ${p})`; filename = p; } }
+          addMsg("you", "user").textContent = display;
+          runTeam(task, addSlot(), filename);
+        } else if (mode === "chat") {
+          if (!ws || ws.readyState !== 1) return;
+          chatSend(withPersona(body) || "(see attachment)", display || "(attachment)", images);
+        } else if (mode === "plan") {
+          addMsg("you", "user").textContent = display; post("/plan", { task: withPersona(body), ...routing() }, addSlot(), renderPlan);
+        } else if (mode === "review") {
+          addMsg("you", "user").textContent = display; post("/review", { code: body, ...routing() }, addSlot(), renderReview);
+        } else if (mode === "implement") {
+          const path = $("#implPath").value.trim();
+          if (!path) { $("#implPath").focus(); $("#implPath").style.borderColor = "var(--err)"; return; }
+          $("#implPath").style.borderColor = "";
+          addMsg("you", "user").textContent = `${display}  →  ${path}`;
+          post("/implement", { instruction: body, target_path: path, approve: false, ...routing() }, addSlot(), renderImplement);
+        }
+        attachments = []; renderAttach();
+        input.value = ""; autoGrow();
+      }
+      $("#sendBtn").addEventListener("click", submit);
+      input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } });
+
+      /* ===== connect models (searchable API keys) ===== */
+      const keysPanel = $("#keysPanel");
+      const KEY_PROVIDERS = [
+        { name: "gemini", label: "Google Gemini", url: "https://aistudio.google.com/apikey" },
+        { name: "groq", label: "Groq (Llama, GPT-OSS, Qwen)", url: "https://console.groq.com/keys" },
+        { name: "openai", label: "OpenAI (GPT-4o)", url: "https://platform.openai.com/api-keys" },
+        { name: "anthropic", label: "Anthropic (Claude)", url: "https://console.anthropic.com/settings/keys" },
+        { name: "mistral", label: "Mistral / Codestral", url: "https://console.mistral.ai" },
+        { name: "openrouter", label: "OpenRouter (DeepSeek R1, many)", url: "https://openrouter.ai/settings/keys" },
+        { name: "cerebras", label: "Cerebras (GPT-OSS-120B)", url: "https://cloud.cerebras.ai" },
+        { name: "xai", label: "xAI (Grok)", url: "https://console.x.ai" },
+      ];
+      function buildKeysList() {
+        const list = $("#keysList"); list.innerHTML = "";
+        for (const p of KEY_PROVIDERS) {
+          const row = document.createElement("div");
+          row.className = "keys-row"; row.dataset.q = (p.name + " " + p.label).toLowerCase();
+          row.innerHTML = `<label>${p.label} <a href="${p.url}" target="_blank" rel="noopener">get key ↗</a></label>`;
+          const inp = document.createElement("input");
+          inp.type = "password"; inp.autocomplete = "off"; inp.placeholder = p.name.toUpperCase() + "_API_KEY"; inp.dataset.provider = p.name;
+          row.appendChild(inp); list.appendChild(row);
+        }
+      }
+      buildKeysList();
+      $("#keysSearch").addEventListener("input", () => {
+        const q = $("#keysSearch").value.trim().toLowerCase();
+        document.querySelectorAll("#keysList .keys-row").forEach((r) => r.classList.toggle("hide", q && !r.dataset.q.includes(q)));
       });
-      $("#reviewBtn").addEventListener("click", () => {
-        const code = $("#reviewCode").value.trim(); if (!code) return;
-        post("/review", { code, ...routing() }, $("#reviewOut"), (d) => {
-          setEngine(d.provider, d.model);
-          const items = d.result.findings.map((f) => `<div class="chip">${esc(f)}</div>`).join("");
-          $("#reviewOut").innerHTML =
-            `<div class="card"><h3>Review <span class="tag">· ${d.provider} / ${d.model}</span></h3>` +
-            `<div class="chips">${items || '<div class="chip">(no findings)</div>'}</div>` +
-            `<div class="tag" style="margin-top:.7rem">summary: ${esc(d.result.summary)}</div></div>`;
-        });
-      });
-      $("#implBtn").addEventListener("click", () => {
-        const instruction = $("#implInstr").value.trim();
-        const target_path = $("#implPath").value.trim();
-        if (!instruction || !target_path) return;
-        const approve = $("#implApprove").checked;
-        post("/implement", { instruction, target_path, approve, ...routing() }, $("#implOut"), (d) => {
-          setEngine(d.provider, d.model);
-          const st = d.executed
-            ? `<span class="ok">written${d.report && d.report.ok ? " ✓" : ""}</span>`
-            : `<span class="tag">dry run — not written</span>`;
-          $("#implOut").innerHTML =
-            `<div class="card"><h3>${esc(d.proposed.path)} <span class="tag">· ${st} · ${d.provider} / ${d.model}</span></h3>` +
-            `<pre>${esc(d.proposed.content)}</pre></div>`;
-          const h = $("#implOut").querySelector("h3"); if (h) h.appendChild(copyBtn(d.proposed.content));
-        });
+      $("#keysBtn").addEventListener("click", () => { keysPanel.hidden = false; });
+      $("#keysClose").addEventListener("click", () => { keysPanel.hidden = true; });
+      keysPanel.addEventListener("click", (e) => { if (e.target === keysPanel) keysPanel.hidden = true; });
+      $("#keysSave").addEventListener("click", async () => {
+        const keys = {};
+        document.querySelectorAll("#keysList input").forEach((i) => { const v = i.value.trim(); if (v) keys[i.dataset.provider] = v; });
+        if (!Object.keys(keys).length) { $("#keysMsg").textContent = "Enter at least one key."; return; }
+        $("#keysMsg").textContent = "connecting…";
+        try {
+          const res = await fetch("/keys", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ keys }) });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.message || "failed");
+          $("#keysMsg").textContent = "✓ connected: " + data.updated.join(", ");
+          document.querySelectorAll("#keysList input").forEach((i) => (i.value = ""));
+          refreshCapabilities();
+          setTimeout(() => { keysPanel.hidden = true; $("#keysMsg").textContent = ""; }, 1400);
+        } catch (e) { $("#keysMsg").textContent = "⚠ " + e.message; }
       });
 
-      boot();
+      /* ===== personality / tone (Grok-style) ===== */
+      const PERSONAS = {
+        neutral: "",
+        friendly: "Respond in a warm, friendly, encouraging tone.",
+        witty: "Respond with a witty, playful, slightly cheeky sense of humor — but still correct and helpful.",
+        empathetic: "Respond with warmth and empathy; acknowledge feelings before helping.",
+        professional: "Respond in a concise, professional, businesslike tone.",
+        hype: "Respond with high energy and enthusiasm — motivating and upbeat.",
+        socratic: "Respond by guiding with thoughtful questions and step-by-step reasoning.",
+      };
+      let persona = "neutral";
+      customSelect(
+        $("#personaCS"),
+        [
+          { value: "neutral", label: "😊 Neutral" },
+          { value: "friendly", label: "🥰 Friendly" },
+          { value: "witty", label: "😂 Witty" },
+          { value: "empathetic", label: "🤗 Empathetic" },
+          { value: "professional", label: "💼 Professional" },
+          { value: "hype", label: "🤩 Hype" },
+          { value: "socratic", label: "📜 Socratic" },
+        ],
+        "neutral",
+        (v) => { persona = v; }
+      );
+      const withPersona = (text) => (PERSONAS[persona] ? `[Style: ${PERSONAS[persona]}]\n\n${text}` : text);
+
+      /* ===== attachments (photos / media / files) ===== */
+      let attachments = [];
+      const fileInput = $("#fileInput");
+      const readAs = (file, how) => new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr[how](file); });
+      function renderAttach() {
+        const bar = $("#attachBar"); bar.innerHTML = ""; bar.hidden = attachments.length === 0;
+        attachments.forEach((a, i) => {
+          const c = document.createElement("span"); c.className = "chip";
+          c.innerHTML = a.kind === "image" ? `<img src="${a.dataUrl}" alt="">` : "📄";
+          const label = document.createElement("span"); label.textContent = a.name; c.appendChild(label);
+          const x = document.createElement("button"); x.type = "button"; x.textContent = "✕";
+          x.onclick = () => { attachments.splice(i, 1); renderAttach(); };
+          c.appendChild(x); bar.appendChild(c);
+        });
+      }
+      $("#attachBtn").addEventListener("click", () => fileInput.click());
+      fileInput.addEventListener("change", async () => {
+        for (const f of fileInput.files) {
+          if (f.type.startsWith("image/")) attachments.push({ kind: "image", name: f.name, dataUrl: await readAs(f, "readAsDataURL") });
+          else if (f.type.startsWith("text/") || /\.(md|py|js|ts|jsx|tsx|json|csv|html|css|yml|yaml|xml|txt|sh)$/i.test(f.name)) attachments.push({ kind: "file", name: f.name, text: await readAs(f, "readAsText") });
+          else attachments.push({ kind: "other", name: f.name });
+        }
+        fileInput.value = ""; renderAttach();
+      });
     </script>
   </body>
 </html>

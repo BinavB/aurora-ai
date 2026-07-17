@@ -35,6 +35,9 @@ def _settings(**keys: str) -> AppSettings:
         "anthropic": ProviderSettings(base_url="https://api.anthropic.com/v1"),
         "gemini": ProviderSettings(base_url="https://gen.googleapis.com"),
         "xai": ProviderSettings(base_url="https://api.x.ai/v1"),
+        "groq": ProviderSettings(base_url="https://api.groq.com/openai/v1"),
+        "mistral": ProviderSettings(base_url="https://api.mistral.ai/v1"),
+        "openrouter": ProviderSettings(base_url="https://openrouter.ai/api/v1"),
     }
     for name, key in keys.items():
         providers[name] = providers[name].model_copy(update={"api_key": key})
@@ -148,14 +151,14 @@ def test_review_endpoint(tmp_path: Path) -> None:
 
 
 def test_review_honors_provider_preference(tmp_path: Path) -> None:
-    # With a cloud key set, preferring openai routes there (not local ollama).
+    # With a key set, preferring gemini routes there (not local ollama).
     provider = ScriptedProvider("- x\nSummary: fine")
-    with _client(provider, tmp_path, openai="sk-x") as client:
+    with _client(provider, tmp_path, gemini="g") as client:
         res = client.post(
-            "/review", json={"code": "def f(): pass", "prefer_provider": "openai"}
+            "/review", json={"code": "def f(): pass", "prefer_provider": "gemini"}
         )
     assert res.status_code == 200
-    assert res.json()["provider"] == "openai"
+    assert res.json()["provider"] == "gemini"
 
 
 def test_implement_dry_run_then_approve(tmp_path: Path) -> None:
@@ -179,9 +182,20 @@ def test_implement_dry_run_then_approve(tmp_path: Path) -> None:
 
 
 def test_router_error_is_structured_409(tmp_path: Path) -> None:
-    # No cloud keys: a tools-requiring implement has no capable model.
-    with _client(_echo(), tmp_path) as client:
-        res = client.post("/implement", json={"instruction": "x", "target_path": "a.py"})
+    # An empty catalog means the router can satisfy nothing -> structured 409.
+    from aurora.app.router import ModelCatalog
+
+    settings = _settings()
+    app = create_app(
+        settings=settings,
+        memory=MemoryStore(Database()),
+        router=Router(ModelCatalog(())),
+        factory=FakeFactory(_echo()),
+        workspace_root=str(tmp_path),
+        transcription=TranscriptionService(transcriber=lambda a, s: ""),
+    )
+    with TestClient(app) as client:
+        res = client.post("/chat", json={"session_id": "s", "message": "hi"})
     assert res.status_code == 409
     assert res.json()["code"] == "router_error"
 
@@ -230,3 +244,50 @@ def test_transcribe_returns_text(tmp_path: Path) -> None:
 def test_transcribe_requires_audio(tmp_path: Path) -> None:
     with _client(_echo(), tmp_path) as client:
         assert client.post("/transcribe").status_code == 422
+
+
+# --- capabilities (gates the attach / mic buttons) ------------------------
+
+
+def test_capabilities_all_off_without_keys(tmp_path: Path) -> None:
+    # Only local Ollama is available -> no vision, no audio provider.
+    with _client(_echo(), tmp_path) as client:
+        caps = client.get("/capabilities").json()
+    assert caps == {"vision": False, "audio": False}
+
+
+def test_capabilities_unlock_with_multimodal_key(tmp_path: Path) -> None:
+    # A Gemini key brings a vision-capable model and an audio-capable provider.
+    with _client(_echo(), tmp_path, gemini="g") as client:
+        caps = client.get("/capabilities").json()
+    assert caps == {"vision": True, "audio": True}
+
+
+def test_capabilities_audio_requires_transcription_backend(tmp_path: Path) -> None:
+    # A vision key alone still can't enable audio if transcription is unavailable.
+    settings = _settings(gemini="g")
+    app = create_app(
+        settings=settings,
+        memory=MemoryStore(Database()),
+        router=Router(build_catalog(settings)),
+        factory=FakeFactory(_echo()),
+        workspace_root=str(tmp_path),
+        transcription=TranscriptionService(),  # no faster-whisper in CI
+    )
+    with TestClient(app) as client:
+        caps = client.get("/capabilities").json()
+    assert caps["vision"] is True
+    # audio hinges on the whisper backend being installed in this environment.
+    assert caps["audio"] == TranscriptionService().available()
+
+
+# --- runtime key connection -----------------------------------------------
+
+
+def test_keys_endpoint_activates_provider(tmp_path: Path) -> None:
+    with _client(_echo(), tmp_path) as client:
+        res = client.post("/keys", json={"keys": {"groq": "gk-live"}})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["updated"] == ["groq"]
+    assert "groq" in body["available"]

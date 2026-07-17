@@ -76,10 +76,15 @@ class BaseProvider:
         try:
             response = await self._chat(request)
         except httpx.HTTPError as exc:
-            self._logger.error("chat_transport_error", extra={"model": request.model})
+            # Never surface the raw exception: its URL carries the API key.
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            reason = f"HTTP {status}" if status else type(exc).__name__
+            self._logger.error(
+                "chat_transport_error", extra={"model": request.model, "status": status}
+            )
             raise ProviderRequestError(
-                f"{self.name} request failed: {exc}",
-                details={"provider": self.name, "model": request.model},
+                f"{self.name} is unavailable ({reason})",
+                details={"provider": self.name, "model": request.model, "status": status},
             ) from exc
         await self._emit(
             "provider.response",

@@ -12,6 +12,8 @@ _SYSTEM = (
     "then a final line starting with 'Summary:'."
 )
 _SUMMARY_MARKER = "summary:"
+# Markers a model might use to introduce its closing summary, in priority order.
+_SUMMARY_HINTS = ("summary", "overall", "in summary", "conclusion", "verdict")
 
 
 class ReviewerAgent(BaseAgent[ReviewInput, ReviewResult]):
@@ -29,7 +31,11 @@ class ReviewerAgent(BaseAgent[ReviewInput, ReviewResult]):
             user(f"Review the following for {request.focus}:\n\n{request.code}"),
         ]
         text = await complete(self._provider, self._model, messages)
-        return ReviewResult(summary=self._summary(text), findings=self._findings(text))
+        findings = self._findings(text)
+        return ReviewResult(
+            summary=self._summary(text) or self._fallback_summary(findings),
+            findings=findings,
+        )
 
     @staticmethod
     def _findings(text: str) -> list[str]:
@@ -41,7 +47,27 @@ class ReviewerAgent(BaseAgent[ReviewInput, ReviewResult]):
 
     @staticmethod
     def _summary(text: str) -> str:
-        for line in text.splitlines():
-            if line.strip().lower().startswith(_SUMMARY_MARKER):
-                return line.split(":", 1)[1].strip()
-        return "No summary provided."
+        """Extract the model's summary, tolerating markdown and varied phrasing."""
+        lines = [ln.rstrip() for ln in text.splitlines()]
+        for i, line in enumerate(lines):
+            head = line.lstrip("#*->•· \t").lower()
+            if not any(head.startswith(hint) for hint in _SUMMARY_HINTS):
+                continue
+            rest = line.split(":", 1)[1] if ":" in line else ""
+            rest = rest.strip(" *_#").strip()
+            if rest:
+                return rest
+            # "Summary:" alone on its line — take the following prose line.
+            for nxt in lines[i + 1 :]:
+                cleaned = nxt.strip(" *_#").strip()
+                if cleaned:
+                    return cleaned
+        return ""
+
+    @staticmethod
+    def _fallback_summary(findings: list[str]) -> str:
+        """A useful summary when the model didn't label one explicitly."""
+        n = len(findings)
+        if n == 0:
+            return "No issues found."
+        return f"{n} issue{'s' if n != 1 else ''} identified."

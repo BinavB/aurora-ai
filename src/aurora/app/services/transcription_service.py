@@ -32,6 +32,14 @@ class TranscriptionService:
         self._transcriber = transcriber
         self._model = None
 
+    def available(self) -> bool:
+        """Whether transcription can run (test seam or faster-whisper present)."""
+        if self._transcriber is not None:
+            return True
+        import importlib.util
+
+        return importlib.util.find_spec("faster_whisper") is not None
+
     def _load(self):
         if self._model is None:
             try:

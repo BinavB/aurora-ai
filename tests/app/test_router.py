@@ -1,4 +1,4 @@
-"""Tests for the router layer."""
+"""Tests for the chain-based router."""
 
 from __future__ import annotations
 
@@ -6,18 +6,26 @@ import pytest
 
 from aurora.app.config.models import AppSettings, ProviderSettings
 from aurora.app.core.exceptions import RouterError
-from aurora.app.router import Capability, Router, RoutingRequest, build_catalog
+from aurora.app.router import (
+    Capability,
+    Router,
+    RoutingRequest,
+    TaskKind,
+    build_catalog,
+)
+
+_BASE = {
+    "ollama": "http://localhost:11434",
+    "gemini": "https://gen.googleapis.com",
+    "groq": "https://api.groq.com/openai/v1",
+    "mistral": "https://api.mistral.ai/v1",
+    "openrouter": "https://openrouter.ai/api/v1",
+    "openai": "https://api.openai.com/v1",
+}
 
 
 def _settings(**keys: str) -> AppSettings:
-    """Build settings; provider names in ``keys`` get an API key."""
-    providers = {
-        "ollama": ProviderSettings(base_url="http://localhost:11434"),
-        "openai": ProviderSettings(base_url="https://api.openai.com/v1"),
-        "anthropic": ProviderSettings(base_url="https://api.anthropic.com/v1"),
-        "gemini": ProviderSettings(base_url="https://gen.googleapis.com"),
-        "xai": ProviderSettings(base_url="https://api.x.ai/v1"),
-    }
+    providers = {n: ProviderSettings(base_url=u) for n, u in _BASE.items()}
     for name, key in keys.items():
         providers[name] = providers[name].model_copy(update={"api_key": key})
     return AppSettings(providers=providers)
@@ -30,96 +38,115 @@ def _router(**keys: str) -> Router:
 # --- availability ---------------------------------------------------------
 
 
-def test_local_model_always_available_cloud_requires_key() -> None:
-    catalog = build_catalog(_settings(openai="sk-x"))
-    available = {m.model for m in catalog.available()}
-    assert "llama3.2" in available  # local, no key needed
-    assert "gpt-4o" in available  # openai key provided
-    assert "claude-sonnet-4" not in available  # no anthropic key
+def test_local_always_available_cloud_requires_key() -> None:
+    catalog = build_catalog(_settings(gemini="g"))
+    avail = {(m.provider, m.model) for m in catalog.available()}
+    assert ("ollama", "llama3.2") in avail  # local, no key
+    assert ("gemini", "gemini-flash-latest") in avail  # key provided
+    assert ("groq", "llama-3.3-70b-versatile") not in avail  # no groq key
 
 
-# --- selection ------------------------------------------------------------
+# --- chains ---------------------------------------------------------------
 
 
-def test_free_local_model_wins_on_cost_when_capable() -> None:
-    # A plain chat/code task is satisfied by the free, local model.
-    decision = _router(openai="sk-x").route(RoutingRequest(task="write a function"))
-    assert (decision.provider, decision.model) == ("ollama", "llama3.2")
-    assert decision.estimated_cost_per_1k == 0.0
-
-
-def test_offline_forces_local_model() -> None:
-    decision = _router(openai="sk-x").route(
-        RoutingRequest(task="explain code", offline=True)
+def test_chat_primary_is_gemini_flash() -> None:
+    d = _router(gemini="g", groq="gk").route(
+        RoutingRequest(task="hi", kind=TaskKind.CHAT)
     )
-    assert decision.provider == "ollama"
-    assert "offline" not in decision.reason or decision.model == "llama3.2"
+    assert (d.provider, d.model) == ("gemini", "gemini-flash-latest")
 
 
-def test_required_capability_filters_pool() -> None:
-    decision = _router(openai="sk-x", gemini="g").route(
+def test_chat_falls_back_to_groq_without_gemini() -> None:
+    d = _router(groq="gk").route(RoutingRequest(task="hi", kind=TaskKind.CHAT))
+    assert (d.provider, d.model) == ("groq", "llama-3.3-70b-versatile")
+
+
+def test_plan_primary_is_groq_reasoning_then_gemini() -> None:
+    d1 = _router(groq="gk").route(RoutingRequest(task="x", kind=TaskKind.PLAN))
+    assert (d1.provider, d1.model) == ("groq", "openai/gpt-oss-120b")
+    # No groq key -> falls through to gemini flash.
+    d2 = _router(gemini="g").route(RoutingRequest(task="x", kind=TaskKind.PLAN))
+    assert (d2.provider, d2.model) == ("gemini", "gemini-flash-latest")
+
+
+def test_review_primary_is_groq_reasoning() -> None:
+    d = _router(groq="gk").route(RoutingRequest(task="x", kind=TaskKind.REVIEW))
+    assert (d.provider, d.model) == ("groq", "openai/gpt-oss-120b")
+
+
+def test_implement_primary_is_codestral_then_groq() -> None:
+    d1 = _router(mistral="mk").route(RoutingRequest(task="x", kind=TaskKind.IMPLEMENT))
+    assert (d1.provider, d1.model) == ("mistral", "codestral-latest")
+    d2 = _router(groq="gk").route(RoutingRequest(task="x", kind=TaskKind.IMPLEMENT))
+    assert (d2.provider, d2.model) == ("groq", "llama-3.3-70b-versatile")
+
+
+def test_summarize_and_explain_chains() -> None:
+    s = _router(gemini="g").route(RoutingRequest(task="x", kind=TaskKind.SUMMARIZE))
+    assert s.model == "gemini-flash-latest"  # summarize leads with gemini flash
+    # explain leads with groq reasoning; without groq it falls to gemini flash
+    e = _router(groq="gk").route(RoutingRequest(task="x", kind=TaskKind.EXPLAIN))
+    assert e.model == "openai/gpt-oss-120b"
+    e2 = _router(gemini="g").route(RoutingRequest(task="x", kind=TaskKind.EXPLAIN))
+    assert e2.model == "gemini-flash-latest"
+
+
+def test_offline_uses_local_chain_link() -> None:
+    d = _router(gemini="g").route(
+        RoutingRequest(task="x", kind=TaskKind.CHAT, offline=True)
+    )
+    assert d.provider == "ollama"
+
+
+def test_no_keys_routes_local() -> None:
+    d = _router().route(RoutingRequest(task="x", kind=TaskKind.CHAT))
+    assert d.provider == "ollama"
+
+
+def test_rank_is_ordered_for_failover() -> None:
+    ranked = _router(gemini="g", groq="gk").rank(
+        RoutingRequest(task="x", kind=TaskKind.CHAT)
+    )
+    pairs = [(d.provider, d.model) for d in ranked]
+    # gemini flash first, groq llama second (chain order), locals later
+    assert pairs[0] == ("gemini", "gemini-flash-latest")
+    assert ("groq", "llama-3.3-70b-versatile") in pairs
+    assert ("ollama", "llama3.2") in pairs
+
+
+def test_prefer_provider_moves_to_front() -> None:
+    d = _router(gemini="g", groq="gk").route(
+        RoutingRequest(task="x", kind=TaskKind.CHAT, prefer_provider="groq")
+    )
+    assert d.provider == "groq"
+
+
+def test_prefer_model_wins() -> None:
+    d = _router(groq="gk").route(
+        RoutingRequest(task="x", kind=TaskKind.CHAT, prefer_model="qwen/qwen3-32b")
+    )
+    assert d.model == "qwen/qwen3-32b"
+
+
+def test_vision_requirement_selects_gemini() -> None:
+    d = _router(gemini="g", groq="gk").route(
         RoutingRequest(
-            task="describe this image",
+            task="x",
+            kind=TaskKind.CHAT,
             required_capabilities=frozenset({Capability.VISION}),
         )
     )
-    # Only gpt-4o and gemini have VISION (llama lacks it); gemini is cheaper.
-    assert decision.model == "gemini-1.5-pro"
-
-
-def test_needs_tools_adds_capability_and_tools() -> None:
-    decision = _router(openai="sk-x").route(
-        RoutingRequest(task="refactor and run tests", needs_tools=True)
-    )
-    assert decision.tools == ["filesystem", "terminal", "git"]
-    assert Capability.TOOLS  # sanity
-
-
-def test_long_context_sets_budget_and_capability() -> None:
-    decision = _router(anthropic="sk-a").route(
-        RoutingRequest(task="summarize repo", long_context=True)
-    )
-    assert decision.model == "claude-sonnet-4"
-    assert decision.context_max_tokens == 8000
-
-
-def test_explicit_model_preference_wins() -> None:
-    decision = _router(openai="sk-x").route(
-        RoutingRequest(task="anything", prefer_model="gpt-4o")
-    )
-    assert decision.model == "gpt-4o"
-    assert decision.reason == "explicit model preference"
-
-
-def test_preferred_provider_is_favored() -> None:
-    decision = _router(openai="sk-x", gemini="g").route(
-        RoutingRequest(task="reason about design", prefer_provider="gemini")
-    )
-    assert decision.provider == "gemini"
-
-
-def test_max_cost_filters_expensive_models() -> None:
-    # needs_tools excludes the free local model (no TOOLS); the cost cap then
-    # rules out gpt-4o (5.0), leaving the affordable gpt-4o-mini (0.15).
-    decision = _router(openai="sk-x", anthropic="sk-a").route(
-        RoutingRequest(task="cheap task", needs_tools=True, max_cost_per_1k=1.0)
-    )
-    assert decision.estimated_cost_per_1k <= 1.0
-    assert decision.model == "gpt-4o-mini"
+    assert d.provider == "gemini"
 
 
 def test_no_candidate_raises_router_error() -> None:
-    # Offline with no local model satisfying VISION -> nothing available.
+    # Offline + vision: no local model has vision.
     with pytest.raises(RouterError):
-        _router(openai="sk-x").route(
+        _router().route(
             RoutingRequest(
-                task="see image",
+                task="x",
+                kind=TaskKind.CHAT,
                 offline=True,
                 required_capabilities=frozenset({Capability.VISION}),
             )
         )
-
-
-def test_no_configured_cloud_keys_still_routes_to_local() -> None:
-    decision = _router().route(RoutingRequest(task="hello"))
-    assert decision.provider == "ollama"

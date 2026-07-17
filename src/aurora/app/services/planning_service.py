@@ -7,7 +7,7 @@ from aurora.app.agents.models import PlannerInput
 from aurora.app.agents.planner import PlannerAgent
 from aurora.app.context.engine import ContextEngine
 from aurora.app.context.models import ContextRequest
-from aurora.app.router.models import RoutingRequest
+from aurora.app.router.models import RoutingRequest, TaskKind
 from aurora.app.router.router import Router
 from aurora.app.services.base import RoutedService
 from aurora.app.services.factory import ProviderFactory
@@ -32,19 +32,24 @@ class PlanningService(RoutedService):
         """Build context for ``workspace`` and plan how to accomplish ``task``."""
         request = RoutingRequest(
             task=task,
+            kind=TaskKind.PLAN,
             offline=offline,
             long_context=True,
             prefer_provider=prefer_provider,
             prefer_model=prefer_model,
         )
-        async with self._routed(request) as (decision, provider):
-            engine = ContextEngine(filesystem_registry(workspace))
+        engine = ContextEngine(filesystem_registry(workspace))
+
+        async def work(decision, provider):
             context = await ContextBuilderAgent(engine).run(
                 ContextRequest(query=task, max_tokens=decision.context_max_tokens)
             )
             plan = await PlannerAgent(provider, decision.model).run(
                 PlannerInput(task=task, context_messages=context.messages)
             )
+            return context, plan
+
+        decision, (context, plan) = await self._attempt(request, work)
         return PlanResult(
             provider=decision.provider,
             model=decision.model,

@@ -5,6 +5,20 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
+class KeysBody(BaseModel):
+    """Provider API keys to apply at runtime (``{provider: key}``)."""
+
+    keys: dict[str, str] = Field(default_factory=dict)
+
+
+class CollaborateBody(BaseModel):
+    """Request body for a structured multi-agent (team) run."""
+
+    task: str = Field(min_length=1)
+    mode: str = "chat"  # chat | plan | review | implement | summarize | explain
+    effort: str = "balanced"  # fast | balanced | max
+
+
 class ChatBody(BaseModel):
     """Request body for a chat turn."""
 
@@ -13,6 +27,7 @@ class ChatBody(BaseModel):
     offline: bool = False
     prefer_provider: str | None = None
     prefer_model: str | None = None
+    images: list[str] = Field(default_factory=list)
 
 
 class PlanBody(BaseModel):

@@ -15,7 +15,14 @@ from fastapi import FastAPI, File, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, StreamingResponse
 
 from aurora.app.api.errors import install_error_handlers
-from aurora.app.api.schemas import ChatBody, ImplementBody, PlanBody, ReviewBody
+from aurora.app.api.schemas import (
+    ChatBody,
+    CollaborateBody,
+    ImplementBody,
+    KeysBody,
+    PlanBody,
+    ReviewBody,
+)
 from aurora.app.config.loader import load_settings
 from aurora.app.config.models import AppSettings
 from aurora.app.core.events import EventBus
@@ -25,8 +32,10 @@ from aurora.app.database.engine import Database
 from aurora.app.memory.store import MemoryStore
 from aurora.app.providers.registry import registered_providers
 from aurora.app.router.catalog import build_catalog
+from aurora.app.router.models import Capability, TaskKind
 from aurora.app.router.router import Router
 from aurora.app.services.chat_service import ChatService
+from aurora.app.services.collaboration_service import CollaborationService, Effort
 from aurora.app.services.factory import DefaultProviderFactory, ProviderFactory
 from aurora.app.services.implementation_service import ImplementationService
 from aurora.app.services.models import (
@@ -68,6 +77,7 @@ def create_app(
     planning = PlanningService(router, factory)
     review = ReviewService(router, factory)
     implementation = ImplementationService(router, factory)
+    collaboration = CollaborationService(router, factory)
     transcription = transcription or TranscriptionService()
 
     @asynccontextmanager
@@ -94,6 +104,29 @@ def create_app(
         specs += terminal_registry(workspace_root).specs()
         return {"tools": specs}
 
+    _AUDIO_PROVIDERS = {"gemini", "groq", "openai"}
+
+    @app.get("/capabilities")
+    async def capabilities() -> dict[str, bool]:
+        available = build_catalog(settings).available()
+        vision = any(Capability.VISION in m.capabilities for m in available)
+        has_audio_provider = any(m.provider in _AUDIO_PROVIDERS for m in available)
+        audio = transcription.available() and has_audio_provider
+        return {"vision": vision, "audio": audio}
+
+    @app.post("/keys")
+    async def set_keys(body: KeysBody) -> dict[str, list[str]]:
+        updated = []
+        for provider, key in body.keys.items():
+            config = settings.providers.get(provider)
+            if config is not None and key.strip():
+                config.api_key = key.strip()
+                updated.append(provider)
+        catalog = build_catalog(settings)
+        router.reload(catalog)
+        available = sorted({m.provider for m in catalog.available()})
+        return {"updated": sorted(updated), "available": available}
+
     @app.post("/chat")
     async def post_chat(body: ChatBody) -> ChatReply:
         return await chat.chat(
@@ -102,6 +135,7 @@ def create_app(
             offline=body.offline,
             prefer_provider=body.prefer_provider,
             prefer_model=body.prefer_model,
+            images=body.images,
         )
 
     @app.post("/chat/stream")
@@ -147,6 +181,24 @@ def create_app(
             prefer_model=body.prefer_model,
         )
 
+    _MODE_KIND = {
+        "chat": TaskKind.CHAT,
+        "plan": TaskKind.PLAN,
+        "review": TaskKind.REVIEW,
+        "implement": TaskKind.IMPLEMENT,
+        "summarize": TaskKind.SUMMARIZE,
+        "explain": TaskKind.EXPLAIN,
+    }
+
+    @app.post("/collaborate")
+    async def collaborate(body: CollaborateBody):
+        kind = _MODE_KIND.get(body.mode, TaskKind.CHAT)
+        try:
+            effort = Effort(body.effort)
+        except ValueError:
+            effort = Effort.BALANCED
+        return await collaboration.collaborate(kind, body.task, effort=effort)
+
     @app.post("/transcribe")
     async def transcribe(audio: UploadFile = File(...)) -> dict[str, str]:
         data = await audio.read()
@@ -176,6 +228,7 @@ async def _handle_ws_turn(chat: ChatService, websocket: WebSocket, data: dict) -
             offline=data.get("offline", False),
             prefer_provider=data.get("prefer_provider"),
             prefer_model=data.get("prefer_model"),
+            images=data.get("images") or [],
         )
     except AuroraError as exc:
         await websocket.send_json({"type": "error", **exc.to_dict()})
@@ -183,7 +236,12 @@ async def _handle_ws_turn(chat: ChatService, websocket: WebSocket, data: dict) -
     for token in reply.content.split():
         await websocket.send_json({"type": "token", "content": token})
     await websocket.send_json(
-        {"type": "done", "provider": reply.provider, "model": reply.model}
+        {
+            "type": "done",
+            "provider": reply.provider,
+            "model": reply.model,
+            "content": reply.content,
+        }
     )
 
 

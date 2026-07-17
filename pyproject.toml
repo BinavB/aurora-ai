@@ -30,7 +30,7 @@ dev = [
 ]
 
 [project.scripts]
-aurora-api = "aurora.api.__main__:main"
+aurora-api = "aurora.app.api.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

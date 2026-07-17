@@ -18,6 +18,17 @@ class Capability(StrEnum):
     TOOLS = "tools"
 
 
+class TaskKind(StrEnum):
+    """The kind of work a request represents, used for chain-based routing."""
+
+    CHAT = "chat"
+    PLAN = "plan"
+    REVIEW = "review"
+    IMPLEMENT = "implement"
+    SUMMARIZE = "summarize"
+    EXPLAIN = "explain"
+
+
 class ModelProfile(BaseModel):
     """Static, provider-independent metadata describing a model.
 
@@ -25,7 +36,7 @@ class ModelProfile(BaseModel):
         provider: Provider name (matches the providers registry).
         model: Model identifier passed to the provider.
         capabilities: What the model can do.
-        cost_per_1k: Blended USD cost per 1k tokens (0 for local models).
+        cost_per_1k: Blended USD cost per 1k tokens (0 for local/free models).
         is_local: Whether the model runs locally (offline-capable).
         latency_ms: Rough latency hint for ranking.
         available: Whether the model is usable given current configuration.
@@ -44,6 +55,7 @@ class RoutingRequest(BaseModel):
     """A request to select a model for a task."""
 
     task: str = Field(min_length=1)
+    kind: TaskKind = TaskKind.CHAT
     offline: bool = False
     needs_tools: bool = False
     long_context: bool = False

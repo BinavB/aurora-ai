@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from aurora.app.config.models import AppSettings, ProviderSettings
+from aurora.app.core.exceptions import ProviderRequestError
+from aurora.app.core.types import ChatRequest, ChatResponse
 from aurora.app.database import Database
 from aurora.app.memory import MemoryStore
 from aurora.app.providers.base import BaseProvider
@@ -19,6 +21,30 @@ from aurora.app.services.factory import ProviderFactory
 from tests.app.conftest import EchoProvider, ScriptedProvider
 
 
+class _AlwaysFail(BaseProvider):
+    """A provider whose chat always fails, to exercise failover."""
+
+    name = "failing"
+
+    async def _chat(self, request: ChatRequest) -> ChatResponse:
+        raise ProviderRequestError("simulated outage")
+
+
+class SelectiveFactory(ProviderFactory):
+    """Fails for named providers, returns a working provider otherwise."""
+
+    def __init__(self, failing: set[str], ok: BaseProvider) -> None:
+        self._failing = failing
+        self._ok = ok
+        self.created: list[str] = []
+
+    def create(self, provider: str) -> BaseProvider:
+        self.created.append(provider)
+        if provider in self._failing:
+            return _AlwaysFail(ProviderSettings(base_url="http://x"))
+        return self._ok
+
+
 def _settings(**keys: str) -> AppSettings:
     providers = {
         "ollama": ProviderSettings(base_url="http://localhost:11434"),
@@ -26,6 +52,9 @@ def _settings(**keys: str) -> AppSettings:
         "anthropic": ProviderSettings(base_url="https://api.anthropic.com/v1"),
         "gemini": ProviderSettings(base_url="https://gen.googleapis.com"),
         "xai": ProviderSettings(base_url="https://api.x.ai/v1"),
+        "groq": ProviderSettings(base_url="https://api.groq.com/openai/v1"),
+        "cerebras": ProviderSettings(base_url="https://api.cerebras.ai/v1"),
+        "mistral": ProviderSettings(base_url="https://api.mistral.ai/v1"),
     }
     for name, key in keys.items():
         providers[name] = providers[name].model_copy(update={"api_key": key})
@@ -104,6 +133,20 @@ async def test_review_service_returns_findings() -> None:
     assert outcome.result.summary == "minor"
 
 
+async def test_review_summary_tolerates_markdown_heading() -> None:
+    # Models often emit '**Summary:**' or '## Summary' rather than 'Summary:'.
+    factory = FakeFactory(ScriptedProvider("- bug A\n- bug B\n\n**Summary:** two bugs"))
+    outcome = await ReviewService(_router(), factory).review("code")
+    assert outcome.result.summary == "two bugs"
+
+
+async def test_review_summary_falls_back_when_unlabeled() -> None:
+    # No 'Summary:' line -> a useful count instead of 'No summary provided.'
+    factory = FakeFactory(ScriptedProvider("- missing tests\n- no types"))
+    outcome = await ReviewService(_router(), factory).review("code")
+    assert outcome.result.summary == "2 issues identified."
+
+
 # --- implementation -------------------------------------------------------
 
 
@@ -132,8 +175,31 @@ async def test_implement_needs_tools_selects_tool_capable_model(tmp_path: Path) 
     factory = FakeFactory(ScriptedProvider("x = 1"))
     service = ImplementationService(_router(openai="sk-x"), factory)
     result = await service.implement("do it", "a.py", str(tmp_path))
-    # Local llama lacks TOOLS; a tool-capable model is selected instead.
-    assert result.provider == "openai"
+    # llama3.2 is tool-capable and free, so the local model handles it.
+    assert result.provider == "ollama"
+
+
+async def test_failover_skips_failing_provider() -> None:
+    # Review chain leads with Groq; Groq fails -> falls over to Gemini.
+    good = ScriptedProvider("- looks fine\nSummary: ok")
+    factory = SelectiveFactory(failing={"groq"}, ok=good)
+    service = ReviewService(_router(gemini="g", groq="gk"), factory)
+    outcome = await service.review("def f():\n    return 1")
+    assert factory.created[0] == "groq"  # tried the primary (Groq) first
+    assert outcome.provider == "gemini"  # then failed over to the next candidate
+
+
+async def test_chat_with_images_routes_to_vision_model() -> None:
+    factory = FakeFactory(ScriptedProvider("I can see a cat."))
+    store = MemoryStore(Database())
+    await store.open()
+    service = ChatService(_router(gemini="g", groq="gk"), factory, store)
+    reply = await service.chat(
+        "s", "what is this?", images=["data:image/png;base64,QQ=="]
+    )
+    # only gemini has VISION -> routed there
+    assert reply.provider == "gemini"
+    assert reply.content == "I can see a cat."
 
 
 async def test_offline_chat_prefers_local(tmp_path: Path) -> None:

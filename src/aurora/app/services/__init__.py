@@ -6,6 +6,11 @@ memory, and agents into cohesive use cases, and contain no low-level logic.
 """
 
 from aurora.app.services.chat_service import ChatService
+from aurora.app.services.collaboration_service import (
+    CollaborationService,
+    CollabResult,
+    Effort,
+)
 from aurora.app.services.factory import DefaultProviderFactory, ProviderFactory
 from aurora.app.services.implementation_service import ImplementationService
 from aurora.app.services.models import (
@@ -26,6 +31,9 @@ __all__ = [
     "ReviewService",
     "ImplementationService",
     "TranscriptionService",
+    "CollaborationService",
+    "CollabResult",
+    "Effort",
     "ChatReply",
     "PlanResult",
     "ReviewOutcome",

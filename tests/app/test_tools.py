@@ -133,6 +133,19 @@ async def test_search(tmp_path: Path) -> None:
     assert hit["path"] == "a.txt" and hit["line"] == 2
 
 
+async def test_search_ignores_vcs_and_secret_files(tmp_path: Path) -> None:
+    # .git internals and .env must never appear in results (noise + secrets).
+    (tmp_path / ".git" / "hooks").mkdir(parents=True)
+    (tmp_path / ".git" / "hooks" / "pre-push.sample").write_text("needle\n")
+    (tmp_path / ".env").write_text("API_KEY=needle\n")
+    (tmp_path / ".env.example").write_text("API_KEY=needle\n")
+    (tmp_path / "keep.txt").write_text("needle\n")
+    reg = filesystem_registry(str(tmp_path))
+    result = await reg.invoke("search_project", {"query": "needle"})
+    paths = {m["path"] for m in result.data["matches"]}
+    assert paths == {"keep.txt", ".env.example"}
+
+
 async def test_search_truncates(tmp_path: Path) -> None:
     reg = filesystem_registry(str(tmp_path))
     await reg.invoke("write_file", {"path": "a.txt", "content": "x\nx\nx\n"})

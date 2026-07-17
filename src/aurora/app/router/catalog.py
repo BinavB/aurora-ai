@@ -13,54 +13,104 @@ from aurora.app.config.models import AppSettings
 from aurora.app.router.models import Capability as C
 from aurora.app.router.models import ModelProfile
 
-# Default catalog. Costs/latency are indicative defaults, not guarantees.
+_ALL: Final = frozenset({C.CHAT, C.CODE, C.REASONING, C.VISION, C.LONG_CONTEXT, C.TOOLS})
+_TEXT: Final = frozenset({C.CHAT, C.CODE, C.REASONING, C.TOOLS, C.LONG_CONTEXT})
+_CODE: Final = frozenset({C.CHAT, C.CODE, C.TOOLS, C.LONG_CONTEXT})
+
+# Every model referenced by the routing chains, plus a local catch-all.
 _DEFAULT_MODELS: Final[tuple[ModelProfile, ...]] = (
+    # Google Gemini (free tier — flash only; Pro requires billing)
+    ModelProfile(
+        provider="gemini",
+        model="gemini-flash-latest",
+        capabilities=_ALL,
+        cost_per_1k=0.0,
+        latency_ms=300,
+    ),
+    # Groq (free tier)
+    ModelProfile(
+        provider="groq",
+        model="llama-3.3-70b-versatile",
+        capabilities=_TEXT,
+        cost_per_1k=0.0,
+        latency_ms=120,
+    ),
+    ModelProfile(
+        provider="groq",
+        model="openai/gpt-oss-120b",
+        capabilities=_TEXT,
+        cost_per_1k=0.0,
+        latency_ms=200,
+    ),
+    ModelProfile(  # free vision model — fallback for images when Gemini is busy
+        provider="groq",
+        model="meta-llama/llama-4-scout-17b-16e-instruct",
+        capabilities=frozenset({C.CHAT, C.CODE, C.VISION, C.TOOLS, C.LONG_CONTEXT}),
+        cost_per_1k=0.0,
+        latency_ms=250,
+    ),
+    ModelProfile(
+        provider="groq",
+        model="qwen/qwen3-32b",
+        capabilities=_TEXT,
+        cost_per_1k=0.0,
+        latency_ms=220,
+    ),
+    # OpenRouter (free variants; needs OPENROUTER_API_KEY)
+    ModelProfile(
+        provider="openrouter",
+        model="meta-llama/llama-3.3-70b-instruct:free",
+        capabilities=_TEXT,
+        cost_per_1k=0.0,
+        latency_ms=500,
+    ),
+    ModelProfile(
+        provider="openrouter",
+        model="deepseek/deepseek-r1:free",
+        capabilities=_TEXT,
+        cost_per_1k=0.0,
+        latency_ms=700,
+    ),
+    # Mistral (free tier)
+    ModelProfile(
+        provider="mistral",
+        model="codestral-latest",
+        capabilities=_CODE,
+        cost_per_1k=0.0,
+        latency_ms=250,
+    ),
+    # Local Ollama (offline; qwen3/devstral require `ollama pull`)
+    ModelProfile(
+        provider="ollama",
+        model="qwen3:8b",
+        capabilities=_CODE,
+        cost_per_1k=0.0,
+        is_local=True,
+        latency_ms=250,
+    ),
+    ModelProfile(
+        provider="ollama",
+        model="qwen3:32b",
+        capabilities=_TEXT,
+        cost_per_1k=0.0,
+        is_local=True,
+        latency_ms=500,
+    ),
+    ModelProfile(
+        provider="ollama",
+        model="devstral",
+        capabilities=_CODE,
+        cost_per_1k=0.0,
+        is_local=True,
+        latency_ms=500,
+    ),
     ModelProfile(
         provider="ollama",
         model="llama3.2",
-        capabilities=frozenset({C.CHAT, C.CODE}),
+        capabilities=_CODE,
         cost_per_1k=0.0,
         is_local=True,
         latency_ms=200,
-    ),
-    ModelProfile(
-        provider="openai",
-        model="gpt-4o-mini",
-        capabilities=frozenset({C.CHAT, C.CODE, C.TOOLS}),
-        cost_per_1k=0.15,
-        latency_ms=300,
-    ),
-    ModelProfile(
-        provider="openai",
-        model="gpt-4o",
-        capabilities=frozenset(
-            {C.CHAT, C.CODE, C.REASONING, C.VISION, C.LONG_CONTEXT, C.TOOLS}
-        ),
-        cost_per_1k=5.0,
-        latency_ms=400,
-    ),
-    ModelProfile(
-        provider="anthropic",
-        model="claude-sonnet-4",
-        capabilities=frozenset({C.CHAT, C.CODE, C.REASONING, C.LONG_CONTEXT, C.TOOLS}),
-        cost_per_1k=3.0,
-        latency_ms=400,
-    ),
-    ModelProfile(
-        provider="gemini",
-        model="gemini-1.5-pro",
-        capabilities=frozenset(
-            {C.CHAT, C.CODE, C.REASONING, C.VISION, C.LONG_CONTEXT, C.TOOLS}
-        ),
-        cost_per_1k=3.5,
-        latency_ms=450,
-    ),
-    ModelProfile(
-        provider="xai",
-        model="grok-2",
-        capabilities=frozenset({C.CHAT, C.CODE, C.REASONING, C.TOOLS}),
-        cost_per_1k=5.0,
-        latency_ms=500,
     ),
 )
 
@@ -81,14 +131,7 @@ class ModelCatalog:
 
 
 def build_catalog(settings: AppSettings) -> ModelCatalog:
-    """Build a catalog whose availability reflects ``settings``.
-
-    Args:
-        settings: Application settings holding provider credentials.
-
-    Returns:
-        A catalog with each model's ``available`` flag set.
-    """
+    """Build a catalog whose availability reflects ``settings`` credentials."""
     resolved: list[ModelProfile] = []
     for template in _DEFAULT_MODELS:
         provider = settings.providers.get(template.provider)

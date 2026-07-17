@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from aurora.app.agents.models import ReviewInput
 from aurora.app.agents.reviewer import ReviewerAgent
-from aurora.app.router.models import RoutingRequest
+from aurora.app.router.models import RoutingRequest, TaskKind
 from aurora.app.router.router import Router
 from aurora.app.services.base import RoutedService
 from aurora.app.services.factory import ProviderFactory
@@ -28,14 +28,18 @@ class ReviewService(RoutedService):
         """Review ``code`` and return structured findings."""
         request = RoutingRequest(
             task="code review",
+            kind=TaskKind.REVIEW,
             offline=offline,
             prefer_provider=prefer_provider,
             prefer_model=prefer_model,
         )
-        async with self._routed(request) as (decision, provider):
-            result = await ReviewerAgent(provider, decision.model).run(
+
+        async def work(decision, provider):
+            return await ReviewerAgent(provider, decision.model).run(
                 ReviewInput(code=code, focus=focus)
             )
+
+        decision, result = await self._attempt(request, work)
         return ReviewOutcome(
             provider=decision.provider, model=decision.model, result=result
         )

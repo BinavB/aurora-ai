@@ -28,6 +28,38 @@ from aurora.app.tools.models import Permission, ToolMetadata
 
 _CATEGORY = "filesystem"
 
+# Directories and files that are noise or secrets — never surfaced in search
+# results (so they never reach a plan's context or an LLM prompt).
+_IGNORED_DIRS = frozenset(
+    {
+        ".git",
+        "__pycache__",
+        ".venv",
+        "venv",
+        "node_modules",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".idea",
+        ".vscode",
+        "dist",
+        "build",
+    }
+)
+
+
+def _is_ignored(path: Path, root: Path) -> bool:
+    """True for VCS internals, caches, and secret ``.env`` files."""
+    parts = path.relative_to(root).parts
+    if any(part in _IGNORED_DIRS for part in parts):
+        return True
+    name = path.name
+    if name == ".env" or (
+        name.startswith(".env.") and not name.endswith((".example", ".sample"))
+    ):
+        return True
+    return False
+
 
 class _FsTool(BaseTool):
     """Base for filesystem tools sharing a sandbox."""
@@ -162,8 +194,9 @@ class SearchProjectTool(_FsTool):
     async def execute(self, payload: SearchInput) -> SearchOutput:
         matches: list[SearchMatch] = []
         truncated = False
-        for path in sorted(self._sandbox.root.glob(payload.glob)):
-            if not path.is_file():
+        root = self._sandbox.root
+        for path in sorted(root.glob(payload.glob)):
+            if not path.is_file() or _is_ignored(path, root):
                 continue
             if self._scan(path, payload.query, payload.max_results, matches):
                 truncated = True

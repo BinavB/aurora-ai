@@ -14,6 +14,16 @@ from aurora.app.providers.registry import register_provider
 _ROLE_MAP: Final[dict[Role, str]] = {Role.USER: "user", Role.ASSISTANT: "model"}
 
 
+def _image_part(image: str) -> dict[str, Any]:
+    """Convert a data URL or raw base64 image into a Gemini inlineData part."""
+    mime = "image/png"
+    data = image
+    if image.startswith("data:"):
+        header, _, data = image.partition(",")
+        mime = header[5:].split(";")[0] or mime
+    return {"inlineData": {"mimeType": mime, "data": data}}
+
+
 @register_provider
 class GeminiProvider(BaseProvider):
     """Adapter for the Gemini ``generateContent`` API."""
@@ -30,6 +40,9 @@ class GeminiProvider(BaseProvider):
             for m in request.messages
             if m.role is not Role.SYSTEM
         ]
+        # Attach images to the final user turn (vision).
+        if request.images and contents:
+            contents[-1]["parts"].extend(_image_part(img) for img in request.images)
         generation: dict[str, Any] = {"temperature": request.temperature}
         if request.max_tokens is not None:
             generation["maxOutputTokens"] = request.max_tokens

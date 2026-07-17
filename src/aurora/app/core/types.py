@@ -35,12 +35,17 @@ class Message(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    """A provider-agnostic chat completion request."""
+    """A provider-agnostic chat completion request.
+
+    ``images`` holds optional image attachments (base64 ``data:`` URLs or raw
+    base64) for the final user turn; only vision-capable providers use them.
+    """
 
     model: str = Field(min_length=1)
     messages: list[Message] = Field(min_length=1)
     temperature: float = Field(default=DEFAULT_TEMPERATURE, ge=0.0, le=2.0)
     max_tokens: int | None = Field(default=None, gt=0)
+    images: list[str] = Field(default_factory=list)
 
 
 class Usage(BaseModel):

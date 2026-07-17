@@ -23,9 +23,21 @@ class OpenAIProvider(BaseProvider):
         return headers
 
     def _payload(self, request: ChatRequest) -> dict[str, Any]:
+        messages: list[dict[str, Any]] = [
+            {"role": m.role.value, "content": m.content} for m in request.messages
+        ]
+        # Attach images to the final user turn (OpenAI-style multimodal content).
+        if request.images:
+            for msg in reversed(messages):
+                if msg["role"] == "user":
+                    msg["content"] = [{"type": "text", "text": msg["content"]}] + [
+                        {"type": "image_url", "image_url": {"url": img}}
+                        for img in request.images
+                    ]
+                    break
         payload: dict[str, Any] = {
             "model": request.model,
-            "messages": [m.model_dump(mode="json") for m in request.messages],
+            "messages": messages,
             "temperature": request.temperature,
         }
         if request.max_tokens is not None:
