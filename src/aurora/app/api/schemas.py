@@ -62,3 +62,17 @@ class ImplementBody(BaseModel):
     offline: bool = False
     prefer_provider: str | None = None
     prefer_model: str | None = None
+
+
+class AgentBody(BaseModel):
+    """Request body for an autonomous agent run.
+
+    The agent writes files and runs commands in the server workspace, so the
+    endpoint is only mounted in a trusted context (see ``enable_agent``).
+    """
+
+    task: str = Field(min_length=1)
+    max_steps: int = Field(default=12, ge=1, le=40)
+    offline: bool = False
+    prefer_provider: str | None = None
+    prefer_model: str | None = None

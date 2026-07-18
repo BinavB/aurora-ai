@@ -16,6 +16,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 
 from aurora.app.api.errors import install_error_handlers
 from aurora.app.api.schemas import (
+    AgentBody,
     ChatBody,
     CollaborateBody,
     ImplementBody,
@@ -34,11 +35,13 @@ from aurora.app.providers.registry import registered_providers
 from aurora.app.router.catalog import build_catalog
 from aurora.app.router.models import Capability, TaskKind
 from aurora.app.router.router import Router
+from aurora.app.services.autonomous_service import AutonomousService
 from aurora.app.services.chat_service import ChatService
 from aurora.app.services.collaboration_service import CollaborationService, Effort
 from aurora.app.services.factory import DefaultProviderFactory, ProviderFactory
 from aurora.app.services.implementation_service import ImplementationService
 from aurora.app.services.models import (
+    AgentResult,
     ChatReply,
     ImplementResult,
     PlanResult,
@@ -63,9 +66,16 @@ def create_app(
     system_prompt: str | None = None,
     frontend_dir: str | None = None,
     transcription: TranscriptionService | None = None,
+    enable_agent: bool | None = None,
 ) -> FastAPI:
     """Build the AURORA API from its collaborators (all injectable)."""
     settings = settings or load_settings()
+    if enable_agent is None:
+        enable_agent = os.environ.get("AURORA_ENABLE_AGENT", "").lower() in {
+            "1",
+            "true",
+            "yes",
+        }
     configure_logging(settings.log_level)
     events = EventBus()
     memory = memory or MemoryStore(Database(os.environ.get("AURORA_DB_PATH", ":memory:")))
@@ -78,6 +88,7 @@ def create_app(
     review = ReviewService(router, factory)
     implementation = ImplementationService(router, factory)
     collaboration = CollaborationService(router, factory)
+    autonomous = AutonomousService(router, factory)
     transcription = transcription or TranscriptionService()
 
     @asynccontextmanager
@@ -112,7 +123,7 @@ def create_app(
         vision = any(Capability.VISION in m.capabilities for m in available)
         has_audio_provider = any(m.provider in _AUDIO_PROVIDERS for m in available)
         audio = transcription.available() and has_audio_provider
-        return {"vision": vision, "audio": audio}
+        return {"vision": vision, "audio": audio, "agent": enable_agent}
 
     @app.post("/keys")
     async def set_keys(body: KeysBody) -> dict[str, list[str]]:
@@ -198,6 +209,19 @@ def create_app(
         except ValueError:
             effort = Effort.BALANCED
         return await collaboration.collaborate(kind, body.task, effort=effort)
+
+    if enable_agent:
+
+        @app.post("/agent")
+        async def run_agent(body: AgentBody) -> AgentResult:
+            return await autonomous.run(
+                body.task,
+                workspace_root,
+                max_steps=body.max_steps,
+                offline=body.offline,
+                prefer_provider=body.prefer_provider,
+                prefer_model=body.prefer_model,
+            )
 
     @app.post("/transcribe")
     async def transcribe(audio: UploadFile = File(...)) -> dict[str, str]:

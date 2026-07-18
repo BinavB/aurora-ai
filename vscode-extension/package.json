@@ -1,0 +1,79 @@
+{
+  "name": "aurora-ai",
+  "displayName": "AURORA AI",
+  "description": "Provider-agnostic AI engineering assistant: chat, explain, review, implement, and an autonomous agent — powered by an AURORA backend.",
+  "version": "0.1.0",
+  "publisher": "binav",
+  "license": "MIT",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["AI", "Programming Languages", "Other"],
+  "keywords": ["ai", "assistant", "agent", "code review", "llm"],
+  "repository": { "type": "git", "url": "https://github.com/BinavB/aurora-ai.git" },
+  "main": "./dist/extension.js",
+  "icon": "media/icon.png",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        { "id": "aurora", "title": "AURORA", "icon": "media/icon.svg" }
+      ]
+    },
+    "views": {
+      "aurora": [
+        { "id": "aurora.chat", "name": "Chat", "type": "webview" }
+      ]
+    },
+    "commands": [
+      { "command": "aurora.focusChat", "title": "AURORA: Open Chat" },
+      { "command": "aurora.explain", "title": "AURORA: Explain Selection" },
+      { "command": "aurora.review", "title": "AURORA: Review File / Selection" },
+      { "command": "aurora.implement", "title": "AURORA: Implement…" },
+      { "command": "aurora.agent", "title": "AURORA: Run Autonomous Agent…" }
+    ],
+    "menus": {
+      "editor/context": [
+        { "command": "aurora.explain", "when": "editorHasSelection", "group": "aurora@1" },
+        { "command": "aurora.review", "group": "aurora@2" }
+      ]
+    },
+    "configuration": {
+      "title": "AURORA",
+      "properties": {
+        "aurora.apiUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:8000",
+          "description": "Primary AURORA API base URL (a local `aurora-api` server). Required for the autonomous agent."
+        },
+        "aurora.fallbackUrl": {
+          "type": "string",
+          "default": "https://aurora-ai-vpgf.onrender.com",
+          "description": "Fallback API base URL used when the primary is unreachable (e.g. your hosted deploy)."
+        },
+        "aurora.effort": {
+          "type": "string",
+          "enum": ["fast", "balanced", "max"],
+          "default": "fast",
+          "description": "Collaboration effort for chat: single agent (fast) or a team (balanced/max)."
+        },
+        "aurora.persona": {
+          "type": "string",
+          "enum": ["neutral", "friendly", "witty", "empathetic", "professional", "hype", "socratic"],
+          "default": "neutral",
+          "description": "Response tone/personality."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.0.0",
+    "typescript": "^5.4.0"
+  }
+}

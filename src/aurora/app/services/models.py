@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from aurora.app.agents.models import CoderOutput, ExecutionReport, Plan, ReviewResult
+from aurora.app.agents.models import (
+    AutonomousReport,
+    CoderOutput,
+    ExecutionReport,
+    Plan,
+    ReviewResult,
+)
 
 
 class ChatReply(BaseModel):
@@ -45,3 +51,11 @@ class ImplementResult(BaseModel):
     proposed: CoderOutput
     executed: bool
     report: ExecutionReport | None = None
+
+
+class AgentResult(BaseModel):
+    """The result of an autonomous agent run: transcript plus outcome."""
+
+    provider: str
+    model: str
+    report: AutonomousReport

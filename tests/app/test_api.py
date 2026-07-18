@@ -253,14 +253,14 @@ def test_capabilities_all_off_without_keys(tmp_path: Path) -> None:
     # Only local Ollama is available -> no vision, no audio provider.
     with _client(_echo(), tmp_path) as client:
         caps = client.get("/capabilities").json()
-    assert caps == {"vision": False, "audio": False}
+    assert caps == {"vision": False, "audio": False, "agent": False}
 
 
 def test_capabilities_unlock_with_multimodal_key(tmp_path: Path) -> None:
     # A Gemini key brings a vision-capable model and an audio-capable provider.
     with _client(_echo(), tmp_path, gemini="g") as client:
         caps = client.get("/capabilities").json()
-    assert caps == {"vision": True, "audio": True}
+    assert caps == {"vision": True, "audio": True, "agent": False}
 
 
 def test_capabilities_audio_requires_transcription_backend(tmp_path: Path) -> None:

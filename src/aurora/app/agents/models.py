@@ -110,3 +110,31 @@ class ExecutionReport(BaseModel):
 
     results: list[ActionResult]
     ok: bool
+
+
+# --- autonomous agent (ReAct loop) ----------------------------------------
+class AgentStep(BaseModel):
+    """One iteration of the autonomous loop: think, act, observe."""
+
+    index: int
+    thought: str = ""
+    tool: str | None = None
+    args: dict = Field(default_factory=dict)
+    ok: bool | None = None
+    observation: str = ""
+
+
+class AutonomousInput(BaseModel):
+    """A goal for the autonomous agent to accomplish via tools."""
+
+    task: str = Field(min_length=1)
+    max_steps: int = Field(default=12, ge=1, le=40)
+    context_messages: list[Message] = Field(default_factory=list)
+
+
+class AutonomousReport(BaseModel):
+    """The transcript and outcome of an autonomous run."""
+
+    answer: str
+    completed: bool
+    steps: list[AgentStep]
