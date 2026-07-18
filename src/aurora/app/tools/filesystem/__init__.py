@@ -10,6 +10,7 @@ from aurora.app.tools.filesystem.tools import (
     DeleteFileTool,
     ReadFileTool,
     RenameFileTool,
+    RepoMapTool,
     SearchProjectTool,
     WriteFileTool,
 )
@@ -32,6 +33,7 @@ def filesystem_registry(root: str) -> ToolRegistry:
             DeleteFileTool(root),
             RenameFileTool(root),
             SearchProjectTool(root),
+            RepoMapTool(root),
         ]
     )
 
@@ -43,5 +45,6 @@ __all__ = [
     "DeleteFileTool",
     "RenameFileTool",
     "SearchProjectTool",
+    "RepoMapTool",
     "filesystem_registry",
 ]

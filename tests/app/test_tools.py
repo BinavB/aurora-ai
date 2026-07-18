@@ -133,6 +133,35 @@ async def test_search(tmp_path: Path) -> None:
     assert hit["path"] == "a.txt" and hit["line"] == 2
 
 
+async def test_repo_map_lists_files_and_symbols(tmp_path: Path) -> None:
+    (tmp_path / "mod.py").write_text(
+        "import os\n\n\nclass Widget:\n    pass\n\n\ndef build(a, b):\n    return a\n"
+    )
+    (tmp_path / "ui.ts").write_text(
+        "export function render(x) {}\nconst helper = () => {}\nclass Box {}\n"
+    )
+    (tmp_path / "notes.md").write_text("# just docs\n")  # non-source: skipped
+    reg = filesystem_registry(str(tmp_path))
+    result = await reg.invoke("repo_map", {})
+    by_path = {e["path"]: e["symbols"] for e in result.data["entries"]}
+    assert "notes.md" not in by_path
+    assert by_path["mod.py"] == ["class Widget", "def build(a, b)"]
+    assert set(by_path["ui.ts"]) == {"function render", "const helper", "class Box"}
+    assert "mod.py" in result.data["rendered"]
+
+
+async def test_repo_map_skips_vcs_and_caps_files(tmp_path: Path) -> None:
+    (tmp_path / ".git").mkdir()
+    (tmp_path / ".git" / "hook.py").write_text("def x(): pass\n")
+    for i in range(3):
+        (tmp_path / f"f{i}.py").write_text("def go(): pass\n")
+    reg = filesystem_registry(str(tmp_path))
+    result = await reg.invoke("repo_map", {"max_files": 2})
+    paths = {e["path"] for e in result.data["entries"]}
+    assert not any(p.startswith(".git") for p in paths)
+    assert result.data["file_count"] == 2 and result.data["truncated"] is True
+
+
 async def test_search_ignores_vcs_and_secret_files(tmp_path: Path) -> None:
     # .git internals and .env must never appear in results (noise + secrets).
     (tmp_path / ".git" / "hooks").mkdir(parents=True)

@@ -52,6 +52,7 @@ from aurora.app.services.review_service import ReviewService
 from aurora.app.services.transcription_service import TranscriptionService
 from aurora.app.tools.filesystem import filesystem_registry
 from aurora.app.tools.terminal import terminal_registry
+from aurora.app.tools.web import web_registry
 
 _logger = get_logger("api.app")
 
@@ -113,6 +114,7 @@ def create_app(
     async def tools() -> dict[str, list]:
         specs = filesystem_registry(workspace_root).specs()
         specs += terminal_registry(workspace_root).specs()
+        specs += web_registry().specs()
         return {"tools": specs}
 
     _AUDIO_PROVIDERS = {"gemini", "groq", "openai"}

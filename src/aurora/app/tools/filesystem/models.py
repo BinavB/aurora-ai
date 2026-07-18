@@ -72,6 +72,29 @@ class SearchMatch(BaseModel):
     text: str
 
 
+class RepoMapInput(BaseModel):
+    """Input for a project-wide structural map."""
+
+    glob: str = "**/*"
+    max_files: int = Field(default=200, gt=0, le=2000)
+
+
+class RepoMapEntry(BaseModel):
+    """One file and its top-level symbols."""
+
+    path: str
+    symbols: list[str]
+
+
+class RepoMapOutput(BaseModel):
+    """A structural overview of the project's source files."""
+
+    entries: list[RepoMapEntry]
+    rendered: str
+    file_count: int
+    truncated: bool
+
+
 class SearchOutput(BaseModel):
     """All matches for a search, with a truncation flag."""
 

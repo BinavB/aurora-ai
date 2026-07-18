@@ -19,15 +19,17 @@ from aurora.app.tools.filesystem import filesystem_registry
 from aurora.app.tools.git import git_registry
 from aurora.app.tools.registry import ToolRegistry
 from aurora.app.tools.terminal import terminal_registry
+from aurora.app.tools.web import web_registry
 
 
 def combined_registry(workspace: str) -> ToolRegistry:
-    """A single registry exposing filesystem, terminal, and git tools."""
+    """A single registry exposing filesystem, terminal, git, and web tools."""
     registry = ToolRegistry()
     sources = (
         filesystem_registry(workspace),
         terminal_registry(workspace),
         git_registry(workspace),
+        web_registry(),
     )
     for source in sources:
         for name in source.names():

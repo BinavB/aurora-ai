@@ -6,6 +6,8 @@ structured output. Writes are atomic and back up any file they overwrite.
 
 from __future__ import annotations
 
+import ast
+import re
 from pathlib import Path
 
 from aurora.app.core.exceptions import ToolError
@@ -17,6 +19,9 @@ from aurora.app.tools.filesystem.models import (
     ReadFileOutput,
     RenameFileInput,
     RenameFileOutput,
+    RepoMapEntry,
+    RepoMapInput,
+    RepoMapOutput,
     SearchInput,
     SearchMatch,
     SearchOutput,
@@ -59,6 +64,50 @@ def _is_ignored(path: Path, root: Path) -> bool:
     ):
         return True
     return False
+
+
+_SOURCE_EXTS = frozenset({".py", ".js", ".ts", ".jsx", ".tsx"})
+_MAX_SYMBOLS_PER_FILE = 40
+_JS_SYMBOL = re.compile(
+    r"^\s*(?:export\s+(?:default\s+)?)?(?:async\s+)?"
+    r"(?:(function|class)\s+([A-Za-z_$][\w$]*)"
+    r"|const\s+([A-Za-z_$][\w$]*)\s*=)",
+    re.MULTILINE,
+)
+
+
+def _python_symbols(content: str) -> list[str]:
+    """Top-level function/class signatures via the ``ast`` module."""
+    try:
+        tree = ast.parse(content)
+    except SyntaxError:
+        return []
+    symbols: list[str] = []
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef):
+            symbols.append(f"class {node.name}")
+        elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            kw = "async def" if isinstance(node, ast.AsyncFunctionDef) else "def"
+            args = ", ".join(arg.arg for arg in node.args.args)
+            symbols.append(f"{kw} {node.name}({args})")
+    return symbols
+
+
+def _js_symbols(content: str) -> list[str]:
+    """Top-level function/class/const declarations via a light regex."""
+    symbols: list[str] = []
+    for match in _JS_SYMBOL.finditer(content):
+        keyword, named, const = match.group(1), match.group(2), match.group(3)
+        if named:
+            symbols.append(f"{keyword} {named}")
+        elif const:
+            symbols.append(f"const {const}")
+    return symbols
+
+
+def _symbols_for(suffix: str, content: str) -> list[str]:
+    extractor = _python_symbols if suffix == ".py" else _js_symbols
+    return extractor(content)[:_MAX_SYMBOLS_PER_FILE]
 
 
 class _FsTool(BaseTool):
@@ -218,3 +267,61 @@ class SearchProjectTool(_FsTool):
                 if len(matches) >= limit:
                     return True
         return False
+
+
+class RepoMapTool(_FsTool):
+    """Summarize the project: source files and their top-level symbols.
+
+    An Aider-style repository map gives an agent a whole-project overview
+    (files plus their functions/classes) so it can orient itself in an
+    unfamiliar codebase without reading every file.
+    """
+
+    metadata = ToolMetadata(
+        name="repo_map",
+        description=(
+            "Map the project: list source files and their top-level "
+            "functions/classes for a quick structural overview."
+        ),
+        category=_CATEGORY,
+        permissions=frozenset({Permission.READ}),
+    )
+    input_model = RepoMapInput
+    output_model = RepoMapOutput
+
+    async def execute(self, payload: RepoMapInput) -> RepoMapOutput:
+        root = self._sandbox.root
+        entries: list[RepoMapEntry] = []
+        truncated = False
+        for path in sorted(root.glob(payload.glob)):
+            if not path.is_file() or _is_ignored(path, root):
+                continue
+            if path.suffix not in _SOURCE_EXTS:
+                continue
+            if len(entries) >= payload.max_files:
+                truncated = True
+                break
+            try:
+                content = path.read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                continue
+            entries.append(
+                RepoMapEntry(
+                    path=self._sandbox.relative(path),
+                    symbols=_symbols_for(path.suffix, content),
+                )
+            )
+        return RepoMapOutput(
+            entries=entries,
+            rendered=self._render(entries),
+            file_count=len(entries),
+            truncated=truncated,
+        )
+
+    @staticmethod
+    def _render(entries: list[RepoMapEntry]) -> str:
+        lines: list[str] = []
+        for entry in entries:
+            lines.append(entry.path)
+            lines.extend(f"    {symbol}" for symbol in entry.symbols)
+        return "\n".join(lines)
