@@ -639,6 +639,26 @@
           .catch((e) => { outEl.innerHTML = `<div class="card"><span class="tag bad">${esc(e.message)}</span></div>`; scrollDown(); });
       }
 
+      // Chat with a team (balanced/max) rendered like the fast chat: a markdown bubble.
+      function teamChat(task, display) {
+        addMsg("you", "user").textContent = display;
+        const bubble = addMsg("aurora");
+        bubble.innerHTML = thinking(); scrollDown();
+        fetch("/collaborate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ task, mode: "chat", effort }) })
+          .then((r) => r.json().then((d) => ({ ok: r.ok, d })))
+          .then(({ ok, d }) => {
+            if (!ok) throw new Error(friendly(d.code, d.message));
+            bubble.classList.add("md");
+            bubble.innerHTML = mdToHtml(d.content);
+            const meta = document.createElement("div"); meta.className = "meta";
+            meta.textContent = `${EFFORT_LABEL[effort]} · team`;
+            meta.appendChild(copyBtn(d.content));
+            bubble.parentElement.appendChild(meta);
+            scrollDown();
+          })
+          .catch((e) => { bubble.parentElement.classList.add("err"); bubble.textContent = e.message; scrollDown(); });
+      }
+
       function submit() {
         const raw = input.value.trim();
         if (!raw && !attachments.length) return;
@@ -647,14 +667,18 @@
         const body = raw + fileText;
         const display = raw + (attachments.length ? `  · ${attachments.length} attachment${attachments.length > 1 ? "s" : ""}` : "");
 
-        if (effort !== "fast") {
+        if (mode === "chat") {
+          if (effort === "fast") {
+            if (!ws || ws.readyState !== 1) return;
+            chatSend(withPersona(body) || "(see attachment)", display || "(attachment)", images);
+          } else {
+            teamChat(withPersona(body), display || "(attachment)");
+          }
+        } else if (effort !== "fast") {
           let task = withPersona(body), filename = null;
           if (mode === "implement") { const p = $("#implPath").value.trim(); if (p) { task += `  (target file: ${p})`; filename = p; } }
           addMsg("you", "user").textContent = display;
           runTeam(task, addSlot(), filename);
-        } else if (mode === "chat") {
-          if (!ws || ws.readyState !== 1) return;
-          chatSend(withPersona(body) || "(see attachment)", display || "(attachment)", images);
         } else if (mode === "plan") {
           addMsg("you", "user").textContent = display; post("/plan", { task: withPersona(body), ...routing() }, addSlot(), renderPlan);
         } else if (mode === "review") {
