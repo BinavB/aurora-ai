@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+from collections.abc import AsyncIterator
 from typing import Any
 
 from aurora.app.core.exceptions import ProviderResponseError
@@ -50,6 +52,33 @@ class OpenAIProvider(BaseProvider):
         )
         response.raise_for_status()
         return self._parse(response.json())
+
+    async def _stream(self, request: ChatRequest) -> AsyncIterator[str]:
+        payload = {**self._payload(request), "stream": True}
+        async with self.client.stream(
+            "POST", "/chat/completions", headers=self._headers(), json=payload
+        ) as response:
+            response.raise_for_status()
+            async for line in response.aiter_lines():
+                delta = self._stream_delta(line)
+                if delta:
+                    yield delta
+
+    @staticmethod
+    def _stream_delta(line: str) -> str | None:
+        """Extract the text delta from one OpenAI SSE ``data:`` line."""
+        if not line.startswith("data:"):
+            return None
+        data = line[5:].strip()
+        if not data or data == "[DONE]":
+            return None
+        try:
+            choice = json.loads(data)["choices"][0]
+        except (json.JSONDecodeError, KeyError, IndexError, TypeError):
+            return None
+        delta = choice.get("delta") or {}
+        content = delta.get("content")
+        return content if isinstance(content, str) else None
 
     def _parse(self, data: dict[str, Any]) -> ChatResponse:
         try:

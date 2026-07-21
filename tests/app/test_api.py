@@ -99,11 +99,22 @@ def test_chat_endpoint(tmp_path: Path) -> None:
 
 
 def test_chat_stream_is_sse(tmp_path: Path) -> None:
+    import json
+
     with _client(_echo(), tmp_path) as client:
         res = client.post("/chat/stream", json={"session_id": "s", "message": "hi there"})
     assert res.status_code == 200
     assert "text/event-stream" in res.headers["content-type"]
-    assert "data: [DONE]" in res.text
+    assert res.text.strip().endswith("data: [DONE]")
+    # The terminal frame is a real JSON chunk carrying provider/model + content.
+    frames = [
+        json.loads(line[6:])
+        for line in res.text.splitlines()
+        if line.startswith("data: ") and line[6:] != "[DONE]"
+    ]
+    done = next(f for f in frames if f["type"] == "done")
+    assert done["provider"] == "ollama"
+    assert done["content"] == "echo[1]: hi there"
 
 
 def test_chat_websocket_streams_tokens(tmp_path: Path) -> None:
@@ -112,7 +123,10 @@ def test_chat_websocket_streams_tokens(tmp_path: Path) -> None:
         tokens = []
         while (msg := ws.receive_json())["type"] != "done":
             tokens.append(msg["content"])
-        assert tokens == ["echo[1]:", "hi"]
+        # Real deltas reassemble into the full reply; the done frame carries meta.
+        assert "".join(tokens) == "echo[1]: hi"
+        assert msg["provider"] == "ollama"
+        assert msg["content"] == "echo[1]: hi"
 
 
 def test_chat_websocket_sends_structured_error_instead_of_crashing(
@@ -176,6 +190,60 @@ def test_implement_dry_run_then_approve(tmp_path: Path) -> None:
         ).json()
         assert done["executed"] is True
     assert (tmp_path / "a.py").read_text() == "print('hi')"
+
+
+def _agent_client(provider: BaseProvider, workspace: Path, **keys: str) -> TestClient:
+    settings = _settings(**keys)
+    app = create_app(
+        settings=settings,
+        memory=MemoryStore(Database()),
+        router=Router(build_catalog(settings)),
+        factory=FakeFactory(provider),
+        workspace_root=str(workspace),
+        enable_agent=True,  # trusted local backend
+    )
+    return TestClient(app)
+
+
+def test_implement_targets_requested_workspace_when_trusted(tmp_path: Path) -> None:
+    server, open_dir = tmp_path / "server", tmp_path / "open"
+    server.mkdir()
+    open_dir.mkdir()
+    provider = ScriptedProvider("print('hi')")
+    with _agent_client(provider, server, openai="sk-x") as client:
+        done = client.post(
+            "/implement",
+            json={
+                "instruction": "make it",
+                "target_path": "a.py",
+                "approve": True,
+                "workspace": str(open_dir),
+            },
+        ).json()
+    assert done["executed"] is True
+    assert (open_dir / "a.py").read_text() == "print('hi')"
+    assert not (server / "a.py").exists()
+
+
+def test_implement_ignores_requested_workspace_when_untrusted(tmp_path: Path) -> None:
+    # With the agent disabled (e.g. hosted), a client path must be ignored.
+    server, open_dir = tmp_path / "server", tmp_path / "open"
+    server.mkdir()
+    open_dir.mkdir()
+    provider = ScriptedProvider("print('hi')")
+    with _client(provider, server, openai="sk-x") as client:  # enable_agent=False
+        done = client.post(
+            "/implement",
+            json={
+                "instruction": "make it",
+                "target_path": "a.py",
+                "approve": True,
+                "workspace": str(open_dir),
+            },
+        ).json()
+    assert done["executed"] is True
+    assert (server / "a.py").read_text() == "print('hi')"
+    assert not (open_dir / "a.py").exists()
 
 
 # --- error handling -------------------------------------------------------

@@ -177,6 +177,106 @@ async def test_gemini_maps_roles_and_system(mock_client: ClientFactory) -> None:
     assert result.usage.total_tokens == 13
 
 
+# --- streaming ------------------------------------------------------------
+
+
+async def test_openai_streams_deltas(mock_client: ClientFactory) -> None:
+    body = (
+        'data: {"choices":[{"delta":{"role":"assistant"}}]}\n\n'
+        'data: {"choices":[{"delta":{"content":"Hel"}}]}\n\n'
+        'data: {"choices":[{"delta":{"content":"lo"}}]}\n\n'
+        "data: [DONE]\n\n"
+    )
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        assert json.loads(req.content)["stream"] is True
+        return httpx.Response(200, text=body)
+
+    provider = OpenAIProvider(SETTINGS, client=mock_client(handler))
+    chunks = [chunk async for chunk in provider.stream(_request())]
+    assert chunks == ["Hel", "lo"]
+
+
+def _anthropic_delta(text: str) -> str:
+    delta = {"type": "text_delta", "text": text}
+    payload = {"type": "content_block_delta", "delta": delta}
+    return f"data: {json.dumps(payload)}\n\n"
+
+
+async def test_anthropic_streams_content_block_deltas(mock_client: ClientFactory) -> None:
+    body = (
+        'data: {"type":"message_start"}\n\n'
+        + _anthropic_delta("Hi")
+        + _anthropic_delta(" you")
+        + 'data: {"type":"message_stop"}\n\n'
+    )
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        assert json.loads(req.content)["stream"] is True
+        return httpx.Response(200, text=body)
+
+    provider = AnthropicProvider(SETTINGS, client=mock_client(handler))
+    assert "".join([c async for c in provider.stream(_request())]) == "Hi you"
+
+
+async def test_gemini_streams_sse(mock_client: ClientFactory) -> None:
+    body = (
+        'data: {"candidates":[{"content":{"parts":[{"text":"Ge"}]}}]}\n\n'
+        'data: {"candidates":[{"content":{"parts":[{"text":"mini"}]}}]}\n\n'
+    )
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        assert ":streamGenerateContent" in str(req.url)
+        assert req.url.params.get("alt") == "sse"
+        return httpx.Response(200, text=body)
+
+    provider = GeminiProvider(SETTINGS, client=mock_client(handler))
+    assert "".join([c async for c in provider.stream(_request())]) == "Gemini"
+
+
+async def test_ollama_streams_ndjson(mock_client: ClientFactory) -> None:
+    body = (
+        '{"message":{"content":"loc"},"done":false}\n'
+        '{"message":{"content":"al"},"done":true}\n'
+    )
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        assert json.loads(req.content)["stream"] is True
+        return httpx.Response(200, text=body)
+
+    provider = OllamaProvider(SETTINGS, client=mock_client(handler))
+    assert "".join([c async for c in provider.stream(_request())]) == "local"
+
+
+async def test_default_stream_falls_back_to_full_completion() -> None:
+    # A provider that implements only _chat still streams (one full delta).
+    chunks = [chunk async for chunk in echo_provider().stream(_request())]
+    assert chunks == ["echo[2]: hello"]
+
+
+async def test_stream_transport_error_is_wrapped(mock_client: ClientFactory) -> None:
+    def handler(req: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("down")
+
+    provider = OpenAIProvider(SETTINGS, client=mock_client(handler))
+    with pytest.raises(ProviderRequestError):
+        _ = [chunk async for chunk in provider.stream(_request())]
+
+
+async def test_stream_error_never_leaks_url_or_key(mock_client: ClientFactory) -> None:
+    def handler(req: httpx.Request) -> httpx.Response:
+        return httpx.Response(429, json={"error": "rate limited"})
+
+    provider = OpenAIProvider(
+        ProviderSettings(base_url="http://secret.local/v1", api_key="sk-leak"),
+        client=mock_client(handler),
+    )
+    with pytest.raises(ProviderRequestError) as excinfo:
+        _ = [chunk async for chunk in provider.stream(_request())]
+    text = str(excinfo.value)
+    assert "sk-leak" not in text and "://" not in text
+
+
 # --- cross-cutting concerns ----------------------------------------------
 
 

@@ -1,12 +1,21 @@
 // AURORA VS Code extension entry point.
 //
 // Native sidebar chat plus editor-context commands (explain, review, implement,
-// autonomous agent). All model work happens in the AURORA backend; this layer
-// gathers editor context, calls the API, and surfaces results in the IDE.
+// autonomous agent). The model work happens in the AURORA backend; this layer
+// gathers editor context, calls the API, and applies results *in the IDE*:
+// implement writes files after a diff review, and the agent operates on the open
+// workspace folder, mirroring its terminal commands and opening changed files.
 
 import * as vscode from "vscode";
 import { AuroraClient, withPersona } from "./api";
 import { AuroraChatViewProvider } from "./chatView";
+import {
+  openPaths,
+  registerIde,
+  reviewAndApply,
+  TranscriptTerminal,
+  workspaceFolderPath,
+} from "./ide";
 
 interface ReviewOutcome {
   provider: string;
@@ -20,23 +29,27 @@ interface ImplementResult {
   proposed: { path: string; content: string };
 }
 
+interface ToolCallInfo {
+  tool: string | null;
+  ok: boolean | null;
+  observation: string;
+  args?: Record<string, unknown>;
+}
+
+interface AgentStepInfo extends ToolCallInfo {
+  index: number;
+  calls?: ToolCallInfo[];
+}
+
 interface AgentResult {
-  report: {
-    completed: boolean;
-    answer: string;
-    steps: {
-      index: number;
-      tool: string | null;
-      ok: boolean | null;
-      observation: string;
-    }[];
-  };
+  report: { completed: boolean; answer: string; steps: AgentStepInfo[] };
 }
 
 export function activate(context: vscode.ExtensionContext): void {
   const client = new AuroraClient();
   const chat = new AuroraChatViewProvider(client);
   const output = vscode.window.createOutputChannel("AURORA");
+  registerIde(context);
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
@@ -140,7 +153,7 @@ async function implement(client: AuroraClient): Promise<void> {
   }
   const active = vscode.window.activeTextEditor;
   const target = await vscode.window.showInputBox({
-    prompt: "Target file name",
+    prompt: "Target file (relative to the workspace)",
     value: active ? vscode.workspace.asRelativePath(active.document.uri) : "index.html",
   });
   if (!target) {
@@ -152,15 +165,16 @@ async function implement(client: AuroraClient): Promise<void> {
       client.post<ImplementResult>("/implement", {
         instruction: withPersona(instruction),
         target_path: target,
-        approve: false,
+        approve: false, // generate only; the IDE applies after review
+        workspace: workspaceFolderPath(),
       })
   );
-  const doc = await vscode.workspace.openTextDocument({
-    content: result.proposed.content,
-  });
-  await vscode.window.showTextDocument(doc);
+  const path = result.proposed.path || target;
+  const applied = await reviewAndApply(path, result.proposed.content);
   void vscode.window.showInformationMessage(
-    `AURORA generated ${result.proposed.path} (${result.provider}/${result.model}). Review, then save where you want.`
+    applied
+      ? `AURORA applied ${path} (${result.provider}/${result.model}).`
+      : `AURORA left ${path} unchanged.`
   );
 }
 
@@ -187,17 +201,87 @@ async function runAgent(
   output.appendLine(`\n▶ ${task}`);
   const result = await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Notification, title: "AURORA agent running…" },
-    () => client.post<AgentResult>("/agent", { task: withPersona(task) })
+    () =>
+      client.post<AgentResult>("/agent", {
+        task: withPersona(task),
+        workspace: workspaceFolderPath(),
+      })
   );
+
+  const terminal = new TranscriptTerminal();
+  const changed: string[] = [];
   for (const step of result.report.steps) {
     const flag = step.ok === false ? " ✗" : "";
     const obs = (step.observation || "").slice(0, 140);
     output.appendLine(`  ${step.index}. ${step.tool ?? "done"}${flag}  ${obs}`);
+    for (const call of effectiveCalls(step)) {
+      routeCall(call, terminal, changed);
+    }
   }
   output.appendLine(
     `\n${result.report.completed ? "✔ completed" : "■ stopped"}: ${result.report.answer}`
   );
+  if (changed.length) {
+    await openPaths(changed);
+  }
   void vscode.window.showInformationMessage(
-    `AURORA agent ${result.report.completed ? "completed" : "stopped"} — see the AURORA output channel.`
+    `AURORA agent ${result.report.completed ? "completed" : "stopped"} — ` +
+      `${changed.length} file(s) changed. See the AURORA output channel.`
   );
+}
+
+/** Flatten a step into its tool calls (a step may batch several). */
+function effectiveCalls(step: AgentStepInfo): ToolCallInfo[] {
+  if (step.calls && step.calls.length) {
+    return step.calls;
+  }
+  return step.tool ? [step] : [];
+}
+
+/** Route a tool call to the terminal transcript or the changed-files list. */
+function routeCall(
+  call: ToolCallInfo,
+  terminal: TranscriptTerminal,
+  changed: string[]
+): void {
+  const args = call.args ?? {};
+  switch (call.tool) {
+    case "run_terminal": {
+      const cmd = Array.isArray(args.command)
+        ? (args.command as unknown[]).join(" ")
+        : String(args.command ?? "");
+      terminal.command(cmd, commandOutput(call.observation));
+      break;
+    }
+    case "run_tests": {
+      const path = typeof args.path === "string" ? args.path : "";
+      const extra = Array.isArray(args.extra_args)
+        ? (args.extra_args as unknown[]).join(" ")
+        : "";
+      terminal.command(`pytest ${path} ${extra}`.trim(), commandOutput(call.observation));
+      break;
+    }
+    case "write_file":
+      if (typeof args.path === "string") {
+        changed.push(args.path);
+      }
+      break;
+    case "rename_file":
+      if (typeof args.dst === "string") {
+        changed.push(args.dst);
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+/** Extract readable stdout/stderr from a captured-command observation. */
+function commandOutput(observation: string): string {
+  try {
+    const data = JSON.parse(observation) as { stdout?: string; stderr?: string };
+    return [data.stdout, data.stderr].filter(Boolean).join("\n") || observation;
+  } catch {
+    return observation;
+  }
 }

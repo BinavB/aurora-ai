@@ -37,6 +37,7 @@ class PlanBody(BaseModel):
     offline: bool = False
     prefer_provider: str | None = None
     prefer_model: str | None = None
+    workspace: str | None = None
 
 
 class ReviewBody(BaseModel):
@@ -62,6 +63,7 @@ class ImplementBody(BaseModel):
     offline: bool = False
     prefer_provider: str | None = None
     prefer_model: str | None = None
+    workspace: str | None = None
 
 
 class AgentBody(BaseModel):
@@ -69,6 +71,8 @@ class AgentBody(BaseModel):
 
     The agent writes files and runs commands in the server workspace, so the
     endpoint is only mounted in a trusted context (see ``enable_agent``).
+    ``workspace`` lets a trusted client (e.g. the IDE extension) target its open
+    project folder instead of the server's launch directory.
     """
 
     task: str = Field(min_length=1)
@@ -76,3 +80,4 @@ class AgentBody(BaseModel):
     offline: bool = False
     prefer_provider: str | None = None
     prefer_model: str | None = None
+    workspace: str | None = None

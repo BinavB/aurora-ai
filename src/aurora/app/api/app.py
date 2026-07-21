@@ -6,6 +6,7 @@ All coordination lives in the services layer; the API only orchestrates.
 
 from __future__ import annotations
 
+import json
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -27,7 +28,7 @@ from aurora.app.api.schemas import (
 from aurora.app.config.loader import load_settings
 from aurora.app.config.models import AppSettings
 from aurora.app.core.events import EventBus
-from aurora.app.core.exceptions import AuroraError
+from aurora.app.core.exceptions import AuroraError, ValidationError
 from aurora.app.core.logging import configure_logging, get_logger
 from aurora.app.database.engine import Database
 from aurora.app.memory.store import MemoryStore
@@ -83,6 +84,23 @@ def create_app(
     router = router or Router(build_catalog(settings))
     factory = factory or DefaultProviderFactory(settings, events)
     workspace_root = workspace_root or os.getcwd()
+
+    def resolve_workspace(requested: str | None) -> str:
+        """Resolve the workspace for a request.
+
+        A client-supplied path is honored only on a trusted backend (where the
+        agent is enabled), letting the IDE target its open folder. Elsewhere the
+        server's configured workspace is always used, so a hosted deployment can
+        never be pointed at an arbitrary directory.
+        """
+        if not requested or not enable_agent:
+            return workspace_root
+        if not Path(requested).is_dir():
+            raise ValidationError(
+                "workspace is not an existing directory",
+                details={"workspace": requested},
+            )
+        return str(Path(requested).resolve())
 
     chat = ChatService(router, factory, memory, system_prompt)
     planning = PlanningService(router, factory)
@@ -153,20 +171,13 @@ def create_app(
 
     @app.post("/chat/stream")
     async def post_chat_stream(body: ChatBody) -> StreamingResponse:
-        reply = await chat.chat(
-            body.session_id,
-            body.message,
-            offline=body.offline,
-            prefer_provider=body.prefer_provider,
-            prefer_model=body.prefer_model,
-        )
-        return StreamingResponse(_sse(reply.content), media_type="text/event-stream")
+        return StreamingResponse(_chat_sse(chat, body), media_type="text/event-stream")
 
     @app.post("/plan")
     async def post_plan(body: PlanBody) -> PlanResult:
         return await planning.plan(
             body.task,
-            workspace_root,
+            resolve_workspace(body.workspace),
             offline=body.offline,
             prefer_provider=body.prefer_provider,
             prefer_model=body.prefer_model,
@@ -187,7 +198,7 @@ def create_app(
         return await implementation.implement(
             body.instruction,
             body.target_path,
-            workspace_root,
+            resolve_workspace(body.workspace),
             approve=body.approve,
             offline=body.offline,
             prefer_provider=body.prefer_provider,
@@ -218,7 +229,7 @@ def create_app(
         async def run_agent(body: AgentBody) -> AgentResult:
             return await autonomous.run(
                 body.task,
-                workspace_root,
+                resolve_workspace(body.workspace),
                 max_steps=body.max_steps,
                 offline=body.offline,
                 prefer_provider=body.prefer_provider,
@@ -237,7 +248,7 @@ def create_app(
         try:
             while True:
                 data = await websocket.receive_json()
-                await _handle_ws_turn(chat, websocket, data)
+                await _stream_ws_turn(chat, websocket, data)
         except WebSocketDisconnect:
             return
 
@@ -245,30 +256,54 @@ def create_app(
     return app
 
 
-async def _handle_ws_turn(chat: ChatService, websocket: WebSocket, data: dict) -> None:
-    """Run one WebSocket chat turn, streaming tokens or a structured error."""
+async def _chat_sse(chat: ChatService, body: ChatBody) -> AsyncIterator[str]:
+    """Stream a chat turn as Server-Sent Events (one JSON frame per delta)."""
     try:
-        reply = await chat.chat(
+        async for chunk in chat.stream_chat(
+            body.session_id,
+            body.message,
+            offline=body.offline,
+            prefer_provider=body.prefer_provider,
+            prefer_model=body.prefer_model,
+        ):
+            yield f"data: {chunk.model_dump_json()}\n\n"
+    except AuroraError as exc:
+        yield f"data: {json.dumps({'type': 'error', **exc.to_dict()})}\n\n"
+    yield "data: [DONE]\n\n"
+
+
+async def _stream_ws_turn(chat: ChatService, websocket: WebSocket, data: dict) -> None:
+    """Stream one WebSocket chat turn as token frames, or a structured error."""
+    try:
+        if data.get("images"):
+            # Vision turns are not streamed: reply in a single terminal frame.
+            reply = await chat.chat(
+                data["session_id"],
+                data["message"],
+                offline=data.get("offline", False),
+                prefer_provider=data.get("prefer_provider"),
+                prefer_model=data.get("prefer_model"),
+                images=data["images"],
+            )
+            await websocket.send_json(
+                {
+                    "type": "done",
+                    "provider": reply.provider,
+                    "model": reply.model,
+                    "content": reply.content,
+                }
+            )
+            return
+        async for chunk in chat.stream_chat(
             data["session_id"],
             data["message"],
             offline=data.get("offline", False),
             prefer_provider=data.get("prefer_provider"),
             prefer_model=data.get("prefer_model"),
-            images=data.get("images") or [],
-        )
+        ):
+            await websocket.send_json(chunk.model_dump())
     except AuroraError as exc:
         await websocket.send_json({"type": "error", **exc.to_dict()})
-        return
-    for token in reply.content.split():
-        await websocket.send_json({"type": "token", "content": token})
-    await websocket.send_json(
-        {
-            "type": "done",
-            "provider": reply.provider,
-            "model": reply.model,
-            "content": reply.content,
-        }
-    )
 
 
 def _mount_frontend(app: FastAPI, frontend_dir: str | None) -> None:
@@ -282,10 +317,3 @@ def _mount_frontend(app: FastAPI, frontend_dir: str | None) -> None:
     @app.get("/", response_class=HTMLResponse)
     async def index_page() -> str:
         return index.read_text(encoding="utf-8")
-
-
-async def _sse(content: str) -> AsyncIterator[str]:
-    """Yield content as Server-Sent Events, one token per event."""
-    for token in content.split():
-        yield f"data: {token}\n\n"
-    yield "data: [DONE]\n\n"

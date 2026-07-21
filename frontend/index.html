@@ -576,7 +576,7 @@
         ws = new WebSocket(`${proto}://${location.host}/ws/chat`);
         ws.onmessage = (ev) => {
           const m = JSON.parse(ev.data); if (!pending) return;
-          if (m.type === "token") { if (pending.dataset.pending) { pending.textContent = ""; delete pending.dataset.pending; } pending.classList.add("cursor"); pending.textContent += (pending.textContent ? " " : "") + m.content; scrollDown(); }
+          if (m.type === "token") { if (pending.dataset.pending) { pending.textContent = ""; delete pending.dataset.pending; } pending.classList.add("cursor"); pending.textContent += m.content; scrollDown(); }
           else if (m.type === "done") { pending.classList.remove("cursor"); const raw = m.content || pending.textContent; pending.classList.add("md"); pending.innerHTML = mdToHtml(raw); const meta = document.createElement("div"); meta.className = "meta"; meta.textContent = `${m.provider} · ${m.model}`; meta.appendChild(copyBtn(raw)); pending.parentElement.appendChild(meta); setEngine(m.provider, m.model); pending = null; scrollDown(); }
           else if (m.type === "error") { pending.classList.remove("cursor"); pending.parentElement.classList.add("err"); pending.textContent = friendly(m.code, m.message); pending = null; scrollDown(); }
         };

@@ -1,22 +1,36 @@
 """Autonomous agent: a ReAct-style loop that uses tools until the task is done.
 
 Unlike the executor (which applies a fixed batch of actions exactly once), this
-agent *iterates*: it asks the model for the next action, runs it through the
-tool registry, feeds the observation back, and repeats — enabling multi-file
+agent *iterates*: it asks the model for the next action(s), runs them through the
+tool registry, feeds the observations back, and repeats — enabling multi-file
 edits and self-correction. The loop is bounded by a step budget and stops early
-if the model declares completion or repeats itself without progress.
+if the model declares completion or spins without progress.
 
-Actions use a portable JSON protocol (not vendor-specific function calling), so
-every provider — local or hosted — can drive the loop identically.
+A single step may request **several tools at once**, which are executed
+concurrently (fan-out); independent reads or writes then cost one round-trip
+instead of many. Actions use a portable JSON protocol (not vendor-specific
+function calling), so every provider — local or hosted — drives the loop
+identically.
+
+Progress is guarded two ways: a step identical to the immediately preceding one
+trips the *stall* limit, and any step repeated too many times across the whole
+run (e.g. an A/B/A/B oscillation) trips the *repeat* limit.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
+from collections import defaultdict
 
 from aurora.app.agents.base import BaseAgent
 from aurora.app.agents.llm import complete, strip_code_fences, system, user
-from aurora.app.agents.models import AgentStep, AutonomousInput, AutonomousReport
+from aurora.app.agents.models import (
+    AgentStep,
+    AutonomousInput,
+    AutonomousReport,
+    ToolCall,
+)
 from aurora.app.core.logging import get_logger
 from aurora.app.core.types import Message, Role
 from aurora.app.providers.interface import LLMProvider
@@ -26,25 +40,29 @@ from aurora.app.tools.registry import ToolRegistry
 _logger = get_logger("agents.autonomous")
 
 _MAX_OBSERVATION = 4000  # cap tool output fed back into the model
-_STALL_LIMIT = 2  # identical consecutive actions before giving up
+_STALL_LIMIT = 2  # identical consecutive steps before giving up
+_REPEAT_LIMIT = 3  # identical steps anywhere in the run before giving up
 
 _SYSTEM = (
     "You are AURORA, an autonomous software engineer. Accomplish the user's "
-    "task by using tools one step at a time: think, act, observe, repeat.\n\n"
+    "task by using tools: think, act, observe, repeat.\n\n"
     "Reply with EXACTLY ONE JSON object per step and nothing else — either\n"
     '  {"thought": "...", "tool": "<tool_name>", "args": {...}}\n'
-    "to call a tool, or\n"
+    "to call one tool, or\n"
+    '  {"thought": "...", "actions": [{"tool": "<t>", "args": {...}}, ...]}\n'
+    "to call several INDEPENDENT tools at once (run in parallel), or\n"
     '  {"thought": "...", "done": true, "answer": "<what you did>"}\n'
     "when the task is fully complete.\n\n"
     "Rules: change files only via write_file; read before you edit; verify with "
-    "run_tests when relevant; take small, safe steps; use only the listed "
-    "tools with their exact argument names.\n\n"
+    "run_tests when relevant; take small, safe steps; only batch tools that do "
+    "not depend on each other and never write the same file twice in one batch; "
+    "use only the listed tools with their exact argument names.\n\n"
     "Available tools:\n"
 )
 
 
 class AutonomousAgent(BaseAgent[AutonomousInput, AutonomousReport]):
-    """Iteratively call tools until the task is done or the budget is spent."""
+    """Iteratively call tools (singly or in parallel) until done or bounded."""
 
     name = "autonomous"
 
@@ -60,6 +78,7 @@ class AutonomousAgent(BaseAgent[AutonomousInput, AutonomousReport]):
             user(f"Task: {request.task}"),
         ]
         steps: list[AgentStep] = []
+        counts: dict[str, int] = defaultdict(int)
         last_signature: str | None = None
         stall = 0
 
@@ -90,41 +109,31 @@ class AutonomousAgent(BaseAgent[AutonomousInput, AutonomousReport]):
                 )
                 return AutonomousReport(answer=answer, completed=True, steps=steps)
 
-            tool = str(action.get("tool", "")).strip()
-            args = action.get("args")
-            args = args if isinstance(args, dict) else {}
             thought = str(action.get("thought", ""))
-
-            if tool not in self._tools.names():
-                observation = (
-                    f"unknown tool '{tool}'. Available: "
-                    f"{', '.join(self._tools.names())}"
-                )
+            calls = self._extract_calls(action)
+            if not calls:
                 steps.append(
                     AgentStep(
                         index=index,
                         thought=thought,
-                        tool=tool,
-                        args=args,
-                        ok=False,
-                        observation=observation,
+                        observation="no tool or actions specified",
                     )
                 )
-                transcript.append(user(f"Observation: {observation}"))
+                transcript.append(
+                    user('Specify a "tool", an "actions" list, or "done": true.')
+                )
                 continue
 
-            signature = f"{tool}:{json.dumps(args, sort_keys=True)}"
+            signature = self._signature(calls)
+            counts[signature] += 1
             stall = stall + 1 if signature == last_signature else 0
             last_signature = signature
-            if stall >= _STALL_LIMIT:
+            if stall >= _STALL_LIMIT or counts[signature] >= _REPEAT_LIMIT:
                 steps.append(
                     AgentStep(
                         index=index,
                         thought=thought,
-                        tool=tool,
-                        args=args,
-                        ok=False,
-                        observation="stopped: repeated the same action",
+                        observation="stopped: repeated an action without progress",
                     )
                 )
                 return AutonomousReport(
@@ -133,21 +142,9 @@ class AutonomousAgent(BaseAgent[AutonomousInput, AutonomousReport]):
                     steps=steps,
                 )
 
-            result = await self._tools.invoke(tool, args)
-            observation = self._observation(result)
-            steps.append(
-                AgentStep(
-                    index=index,
-                    thought=thought,
-                    tool=tool,
-                    args=args,
-                    ok=result.ok,
-                    observation=observation,
-                )
-            )
-            transcript.append(
-                user(f"Observation ({tool}, ok={result.ok}): {observation}")
-            )
+            results = await self._run_calls(calls)
+            steps.append(self._step(index, thought, results))
+            transcript.append(user(self._observation_block(results)))
 
         _logger.info("autonomous_budget_exhausted", extra={"steps": len(steps)})
         return AutonomousReport(
@@ -155,6 +152,84 @@ class AutonomousAgent(BaseAgent[AutonomousInput, AutonomousReport]):
             completed=False,
             steps=steps,
         )
+
+    async def _run_calls(self, calls: list[tuple[str, dict]]) -> list[ToolCall]:
+        """Execute a batch of tool calls concurrently, preserving order."""
+
+        async def one(tool: str, args: dict) -> ToolCall:
+            if tool not in self._tools.names():
+                available = ", ".join(self._tools.names())
+                return ToolCall(
+                    tool=tool,
+                    args=args,
+                    ok=False,
+                    observation=f"unknown tool '{tool}'. Available: {available}",
+                )
+            result = await self._tools.invoke(tool, args)
+            return ToolCall(
+                tool=tool, args=args, ok=result.ok, observation=self._observation(result)
+            )
+
+        return list(await asyncio.gather(*(one(tool, args) for tool, args in calls)))
+
+    @staticmethod
+    def _step(index: int, thought: str, results: list[ToolCall]) -> AgentStep:
+        """Build a step, mirroring the single call into the scalar fields."""
+        if len(results) == 1:
+            call = results[0]
+            return AgentStep(
+                index=index,
+                thought=thought,
+                tool=call.tool,
+                args=call.args,
+                ok=call.ok,
+                observation=call.observation,
+                calls=results,
+            )
+        return AgentStep(
+            index=index,
+            thought=thought,
+            ok=all(bool(call.ok) for call in results),
+            observation="; ".join(f"{c.tool}: ok={c.ok}" for c in results),
+            calls=results,
+        )
+
+    @staticmethod
+    def _observation_block(results: list[ToolCall]) -> str:
+        """Format the observation(s) fed back into the transcript."""
+        if len(results) == 1:
+            call = results[0]
+            return f"Observation ({call.tool}, ok={call.ok}): {call.observation}"
+        lines = [f"[{c.tool} ok={c.ok}] {c.observation}" for c in results]
+        return "Observations:\n" + "\n".join(lines)
+
+    @staticmethod
+    def _extract_calls(action: dict) -> list[tuple[str, dict]]:
+        """Normalize the action into an ordered list of (tool, args) calls."""
+        raw = action.get("actions")
+        if isinstance(raw, list):
+            calls: list[tuple[str, dict]] = []
+            for item in raw:
+                if not isinstance(item, dict):
+                    continue
+                tool = str(item.get("tool", "")).strip()
+                args = item.get("args")
+                if tool:
+                    calls.append((tool, args if isinstance(args, dict) else {}))
+            return calls
+        tool = str(action.get("tool", "")).strip()
+        if not tool:
+            return []
+        args = action.get("args")
+        return [(tool, args if isinstance(args, dict) else {})]
+
+    @staticmethod
+    def _signature(calls: list[tuple[str, dict]]) -> str:
+        """A batch-order-independent signature for loop detection."""
+        parts = sorted(
+            f"{tool}:{json.dumps(args, sort_keys=True)}" for tool, args in calls
+        )
+        return " | ".join(parts)
 
     def _tool_catalog(self) -> str:
         """Compact, model-facing description of every available tool."""

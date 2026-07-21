@@ -7,6 +7,8 @@ providers implement only vendor request/response translation.
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+
 import httpx
 
 from aurora.app.config.models import ProviderSettings
@@ -97,6 +99,32 @@ class BaseProvider:
         )
         return response
 
+    async def stream(self, request: ChatRequest) -> AsyncIterator[str]:
+        """Stream a completion as text deltas, with uniform error handling.
+
+        Transport failures are wrapped identically to :meth:`chat`, so the key
+        is never leaked. Providers override :meth:`_stream` for true incremental
+        output; the default yields the full completion as a single delta.
+        """
+        await self._emit("provider.request", model=request.model)
+        self._logger.info("chat_stream_request", extra={"model": request.model})
+        try:
+            async for delta in self._stream(request):
+                if delta:
+                    yield delta
+        except httpx.HTTPError as exc:
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            reason = f"HTTP {status}" if status else type(exc).__name__
+            self._logger.error(
+                "chat_stream_transport_error",
+                extra={"model": request.model, "status": status},
+            )
+            raise ProviderRequestError(
+                f"{self.name} is unavailable ({reason})",
+                details={"provider": self.name, "model": request.model, "status": status},
+            ) from exc
+        await self._emit("provider.response", model=request.model)
+
     async def _emit(self, name: str, **payload: object) -> None:
         if self._events is not None:
             await self._events.publish(Event(name=name, payload=dict(payload)))
@@ -104,3 +132,13 @@ class BaseProvider:
     async def _chat(self, request: ChatRequest) -> ChatResponse:
         """Vendor-specific completion. Implemented by subclasses."""
         raise NotImplementedError
+
+    async def _stream(self, request: ChatRequest) -> AsyncIterator[str]:
+        """Vendor-specific streaming.
+
+        Default: fall back to a single non-streaming call. This keeps every
+        provider correct even before it implements true token streaming.
+        """
+        response = await self._chat(request)
+        if response.content:
+            yield response.content

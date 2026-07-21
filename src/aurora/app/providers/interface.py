@@ -6,6 +6,7 @@ Higher layers depend on this Protocol, never on a concrete provider, honoring
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from typing import Protocol, runtime_checkable
 
 from aurora.app.core.types import ChatRequest, ChatResponse
@@ -19,6 +20,10 @@ class LLMProvider(Protocol):
 
     async def chat(self, request: ChatRequest) -> ChatResponse:
         """Produce a completion for ``request``."""
+        ...
+
+    def stream(self, request: ChatRequest) -> AsyncIterator[str]:
+        """Yield the completion incrementally as text deltas."""
         ...
 
     async def aclose(self) -> None:

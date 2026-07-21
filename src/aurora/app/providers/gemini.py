@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+from collections.abc import AsyncIterator
 from typing import Any, Final
 
 from aurora.app.core.exceptions import ProviderResponseError
@@ -62,6 +64,34 @@ class GeminiProvider(BaseProvider):
         )
         response.raise_for_status()
         return self._parse(response.json(), request.model)
+
+    async def _stream(self, request: ChatRequest) -> AsyncIterator[str]:
+        async with self.client.stream(
+            "POST",
+            f"/models/{request.model}:streamGenerateContent",
+            params={**self._params(), "alt": "sse"},
+            json=self._payload(request),
+        ) as response:
+            response.raise_for_status()
+            async for line in response.aiter_lines():
+                delta = self._stream_delta(line)
+                if delta:
+                    yield delta
+
+    @staticmethod
+    def _stream_delta(line: str) -> str | None:
+        """Extract text from one Gemini ``streamGenerateContent`` SSE line."""
+        if not line.startswith("data:"):
+            return None
+        data = line[5:].strip()
+        if not data:
+            return None
+        try:
+            parts = json.loads(data)["candidates"][0]["content"]["parts"]
+        except (json.JSONDecodeError, KeyError, IndexError, TypeError):
+            return None
+        text = "".join(p.get("text", "") for p in parts)
+        return text or None
 
     def _parse(self, data: dict[str, Any], model: str) -> ChatResponse:
         try:

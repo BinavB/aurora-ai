@@ -10,8 +10,13 @@ automatic failover.
 - **Sidebar chat** (AURORA icon in the activity bar) — persona- and effort-aware.
 - **AURORA: Explain Selection** — explain the selected code (or whole file).
 - **AURORA: Review File / Selection** — structured findings + summary.
-- **AURORA: Implement…** — generate a file from an instruction; opens in the editor for you to save.
-- **AURORA: Run Autonomous Agent…** — a ReAct loop that reads/writes files and runs commands in your workspace (requires a local backend with the agent enabled).
+- **AURORA: Implement…** — generate a file from an instruction, preview it as a **diff against the current file**, and **write it to disk** on approval.
+- **AURORA: Run Autonomous Agent…** — a ReAct loop that reads/writes files and runs commands in **your open workspace folder**. It mirrors the commands it runs into an integrated **AURORA Agent** terminal and opens the files it changed. (Requires a local backend with the agent enabled.)
+
+The extension sends the open workspace folder to the backend, so `implement` and
+the agent act on **your project** rather than the server's launch directory. A
+client-supplied workspace is honored only by a trusted local backend (one with
+`AURORA_ENABLE_AGENT=1`); a hosted backend always ignores it.
 
 ## Requirements
 

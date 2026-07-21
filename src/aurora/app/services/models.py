@@ -22,6 +22,20 @@ class ChatReply(BaseModel):
     total_tokens: int
 
 
+class StreamChunk(BaseModel):
+    """One frame of a streamed chat turn.
+
+    ``type`` is ``"token"`` for an incremental delta (``content``) or ``"done"``
+    for the terminal frame, which also carries the chosen ``provider``/``model``
+    and the full assembled ``content``.
+    """
+
+    type: str
+    content: str = ""
+    provider: str | None = None
+    model: str | None = None
+
+
 class PlanResult(BaseModel):
     """The result of a planning request."""
 

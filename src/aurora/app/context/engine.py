@@ -18,7 +18,6 @@ from aurora.app.context.interfaces import (
     QueryAnalyzer,
     SymbolExtractor,
 )
-from aurora.app.context.locator import SearchFileLocator
 from aurora.app.context.models import (
     BuiltContext,
     ContextChunk,
@@ -26,6 +25,7 @@ from aurora.app.context.models import (
     FileCandidate,
     QueryPlan,
 )
+from aurora.app.context.semantic_locator import SemanticFileLocator
 from aurora.app.core.logging import get_logger
 from aurora.app.tools.registry import ToolRegistry
 
@@ -46,7 +46,7 @@ class ContextEngine:
     ) -> None:
         self._fs = filesystem
         self._analyzer = analyzer or KeywordQueryAnalyzer()
-        self._locator = locator or SearchFileLocator(filesystem)
+        self._locator = locator or SemanticFileLocator(filesystem)
         self._extractor = extractor or PythonSymbolExtractor()
         self._compressor = compressor or SymbolAwareCompressor()
         self._builder = builder or MessagePromptBuilder()

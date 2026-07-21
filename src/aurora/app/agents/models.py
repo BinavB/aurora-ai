@@ -113,8 +113,22 @@ class ExecutionReport(BaseModel):
 
 
 # --- autonomous agent (ReAct loop) ----------------------------------------
+class ToolCall(BaseModel):
+    """One tool invocation within a step (a step may run several in parallel)."""
+
+    tool: str
+    args: dict = Field(default_factory=dict)
+    ok: bool | None = None
+    observation: str = ""
+
+
 class AgentStep(BaseModel):
-    """One iteration of the autonomous loop: think, act, observe."""
+    """One iteration of the autonomous loop: think, act, observe.
+
+    A step may invoke several tools at once (``calls``, run in parallel). The
+    scalar ``tool``/``args``/``ok``/``observation`` mirror the single call when a
+    step makes exactly one, preserving the simple single-tool view.
+    """
 
     index: int
     thought: str = ""
@@ -122,6 +136,7 @@ class AgentStep(BaseModel):
     args: dict = Field(default_factory=dict)
     ok: bool | None = None
     observation: str = ""
+    calls: list[ToolCall] = Field(default_factory=list)
 
 
 class AutonomousInput(BaseModel):

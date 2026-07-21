@@ -91,6 +91,25 @@ class RecordingEcho(EchoProvider):
         await super().aclose()
 
 
+class _Streamer(BaseProvider):
+    """A provider that streams fixed deltas and records when it is closed."""
+
+    name = "streamer"
+
+    def __init__(self, chunks: list[str]) -> None:
+        super().__init__(ProviderSettings(base_url="http://s"))
+        self._chunks = chunks
+        self.closed = False
+
+    async def _stream(self, request: ChatRequest):
+        for chunk in self._chunks:
+            yield chunk
+
+    async def aclose(self) -> None:
+        self.closed = True
+        await super().aclose()
+
+
 # --- chat -----------------------------------------------------------------
 
 
@@ -107,6 +126,40 @@ async def test_chat_service_routes_persists_and_closes_provider() -> None:
     assert len(await store.conversation("s")) == 2
     assert provider.closed is True  # provider lifecycle handled by the service
     assert factory.created == ["ollama"]
+
+
+async def test_stream_chat_yields_tokens_persists_and_closes() -> None:
+    provider = _Streamer(["Hel", "lo"])
+    store = MemoryStore(Database())
+    await store.open()
+    service = ChatService(_router(), FakeFactory(provider), store)
+
+    chunks = [chunk async for chunk in service.stream_chat("s", "hi")]
+    tokens = [c.content for c in chunks if c.type == "token"]
+    done = next(c for c in chunks if c.type == "done")
+
+    assert tokens == ["Hel", "lo"]
+    assert done.content == "Hello"
+    assert done.provider == "ollama"
+    assert provider.closed is True
+    # The full turn (user + assembled assistant reply) is persisted.
+    history = await store.conversation("s")
+    assert [m.content for m in history] == ["hi", "Hello"]
+
+
+async def test_stream_chat_fails_over_before_first_token() -> None:
+    # The CHAT chain leads with Gemini; it fails to open -> fall over to local.
+    good = _Streamer(["ok"])
+    factory = SelectiveFactory(failing={"gemini"}, ok=good)
+    store = MemoryStore(Database())
+    await store.open()
+    service = ChatService(_router(gemini="g"), factory, store)
+
+    chunks = [chunk async for chunk in service.stream_chat("s", "hi")]
+    done = next(c for c in chunks if c.type == "done")
+    assert factory.created[0] == "gemini"  # tried the primary first
+    assert done.provider == "ollama"  # then failed over to the local model
+    assert done.content == "ok"
 
 
 # --- planning -------------------------------------------------------------
