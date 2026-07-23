@@ -40,6 +40,8 @@ class ModelProfile(BaseModel):
         is_local: Whether the model runs locally (offline-capable).
         latency_ms: Rough latency hint for ranking.
         available: Whether the model is usable given current configuration.
+        strengths: Relative skill levels (0-3) keyed by skill name — e.g.
+            ``{"reasoning": 3, "coding": 2}`` — used for model-aware assignment.
     """
 
     provider: str
@@ -49,6 +51,7 @@ class ModelProfile(BaseModel):
     is_local: bool = False
     latency_ms: int = Field(gt=0)
     available: bool = True
+    strengths: dict[str, int] = Field(default_factory=dict)
 
 
 class RoutingRequest(BaseModel):

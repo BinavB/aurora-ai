@@ -5,17 +5,12 @@ from __future__ import annotations
 from aurora.app.agents.models import ReviewInput
 from aurora.app.agents.reviewer import ReviewerAgent
 from aurora.app.router.models import RoutingRequest, TaskKind
-from aurora.app.router.router import Router
 from aurora.app.services.base import RoutedService
-from aurora.app.services.factory import ProviderFactory
 from aurora.app.services.models import ReviewOutcome
 
 
 class ReviewService(RoutedService):
     """Route and run the reviewer agent over supplied code."""
-
-    def __init__(self, router: Router, factory: ProviderFactory) -> None:
-        super().__init__(router, factory)
 
     async def review(
         self,
@@ -35,7 +30,7 @@ class ReviewService(RoutedService):
         )
 
         async def work(decision, provider):
-            return await ReviewerAgent(provider, decision.model).run(
+            return await ReviewerAgent(provider, decision.model, self._system_prompt).run(
                 ReviewInput(code=code, focus=focus)
             )
 

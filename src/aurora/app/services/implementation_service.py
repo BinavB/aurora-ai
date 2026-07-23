@@ -14,9 +14,7 @@ from aurora.app.agents.models import CoderInput, ExecutorInput, WriteFileAction
 from aurora.app.context.engine import ContextEngine
 from aurora.app.context.models import ContextRequest
 from aurora.app.router.models import RoutingRequest, TaskKind
-from aurora.app.router.router import Router
 from aurora.app.services.base import RoutedService
-from aurora.app.services.factory import ProviderFactory
 from aurora.app.services.models import ImplementResult
 from aurora.app.tools.filesystem import filesystem_registry
 from aurora.app.tools.terminal import terminal_registry
@@ -24,9 +22,6 @@ from aurora.app.tools.terminal import terminal_registry
 
 class ImplementationService(RoutedService):
     """Coordinate context, code generation, and (approved) execution."""
-
-    def __init__(self, router: Router, factory: ProviderFactory) -> None:
-        super().__init__(router, factory)
 
     async def implement(
         self,
@@ -53,7 +48,7 @@ class ImplementationService(RoutedService):
             context = await ContextBuilderAgent(engine).run(
                 ContextRequest(query=instruction, max_tokens=decision.context_max_tokens)
             )
-            return await CoderAgent(provider, decision.model).run(
+            return await CoderAgent(provider, decision.model, self._system_prompt).run(
                 CoderInput(
                     instruction=instruction,
                     target_path=target_path,

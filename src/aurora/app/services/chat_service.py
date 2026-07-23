@@ -29,9 +29,8 @@ class ChatService(RoutedService):
         memory: MemoryStore,
         system_prompt: str | None = None,
     ) -> None:
-        super().__init__(router, factory)
+        super().__init__(router, factory, system_prompt)
         self._memory = memory
-        self._system_prompt = system_prompt
 
     async def chat(
         self,

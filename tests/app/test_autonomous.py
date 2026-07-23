@@ -113,13 +113,14 @@ async def test_agent_halts_on_repeated_action(tmp_path: Path) -> None:
 async def test_agent_reports_unknown_tool_then_recovers(tmp_path: Path) -> None:
     replies = [
         '{"tool":"frobnicate","args":{}}',
-        '{"done":true,"answer":"ok"}',
+        '{"tool":"write_file","args":{"path":"r.txt","content":"ok"}}',
+        '{"done":true,"answer":"wrote r.txt"}',
     ]
     agent = AutonomousAgent(
         SequencedProvider(replies), "m", filesystem_registry(str(tmp_path))
     )
     report = await agent.run(AutonomousInput(task="oops"))
-    assert report.completed is True
+    assert report.completed is True  # recovered and did verifiable work
     assert "unknown tool" in report.steps[0].observation
 
 

@@ -81,3 +81,19 @@ class AgentBody(BaseModel):
     prefer_provider: str | None = None
     prefer_model: str | None = None
     workspace: str | None = None
+
+
+class TaskBody(BaseModel):
+    """Request body for the full agentic pipeline.
+
+    Runs Intent → Plan → Execute → Verify → Learn. Like the agent, it writes
+    files and runs commands, so its endpoint is only mounted when the agent is
+    enabled. ``workspace`` targets a trusted client's open folder.
+    """
+
+    task: str = Field(min_length=1)
+    max_steps: int = Field(default=12, ge=1, le=40)
+    offline: bool = False
+    prefer_provider: str | None = None
+    prefer_model: str | None = None
+    workspace: str | None = None

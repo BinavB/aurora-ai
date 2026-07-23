@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
 from aurora.app.core.types import Message
+from aurora.app.guards.models import AgentEvidence, CompletionCheck
 
 
 # --- planner --------------------------------------------------------------
@@ -113,6 +115,18 @@ class ExecutionReport(BaseModel):
 
 
 # --- autonomous agent (ReAct loop) ----------------------------------------
+class AgentPhase(StrEnum):
+    """Explicit states of the autonomous agent's engineering loop."""
+
+    ANALYZE = "ANALYZE"  # understand the objective
+    PLAN = "PLAN"  # decide the strategy
+    INVESTIGATE = "INVESTIGATE"  # gather repository/tool evidence
+    EXECUTE = "EXECUTE"  # perform actions
+    VERIFY = "VERIFY"  # check correctness
+    REFLECT = "REFLECT"  # look for mistakes
+    COMPLETE = "COMPLETE"  # only after validation
+
+
 class ToolCall(BaseModel):
     """One tool invocation within a step (a step may run several in parallel)."""
 
@@ -127,16 +141,32 @@ class AgentStep(BaseModel):
 
     A step may invoke several tools at once (``calls``, run in parallel). The
     scalar ``tool``/``args``/``ok``/``observation`` mirror the single call when a
-    step makes exactly one, preserving the simple single-tool view.
+    step makes exactly one, preserving the simple single-tool view. ``phase``
+    records which engineering state the step belongs to.
     """
 
     index: int
+    phase: str = ""
     thought: str = ""
     tool: str | None = None
     args: dict = Field(default_factory=dict)
     ok: bool | None = None
     observation: str = ""
     calls: list[ToolCall] = Field(default_factory=list)
+
+
+class VerificationMetadata(BaseModel):
+    """The agent's self-assessment of its own run.
+
+    Makes uncertainty explicit: a confidence score plus what was actually
+    verified versus assumed, the risks, and what remains unknown.
+    """
+
+    confidence: int = 0  # 0-100
+    verified: list[str] = Field(default_factory=list)
+    assumptions: list[str] = Field(default_factory=list)
+    risks: list[str] = Field(default_factory=list)
+    unknowns: list[str] = Field(default_factory=list)
 
 
 class AutonomousInput(BaseModel):
@@ -153,3 +183,6 @@ class AutonomousReport(BaseModel):
     answer: str
     completed: bool
     steps: list[AgentStep]
+    metadata: VerificationMetadata = Field(default_factory=VerificationMetadata)
+    evidence: AgentEvidence | None = None
+    completion: CompletionCheck | None = None

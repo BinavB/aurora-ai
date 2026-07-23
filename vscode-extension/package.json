@@ -2,7 +2,7 @@
   "name": "aurora-ai",
   "displayName": "AURORA AI",
   "description": "Provider-agnostic AI engineering assistant: chat, explain, review, implement, and an autonomous agent — powered by an AURORA backend.",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "publisher": "binav",
   "license": "MIT",
   "engines": { "vscode": "^1.85.0" },
@@ -57,9 +57,9 @@
         },
         "aurora.persona": {
           "type": "string",
-          "enum": ["neutral", "friendly", "witty", "empathetic", "professional", "hype", "socratic"],
+          "enum": ["neutral", "friendly", "witty", "empathetic", "professional", "hype", "socratic", "engineer"],
           "default": "neutral",
-          "description": "Response tone/personality."
+          "description": "Response tone/personality. 'engineer' analyzes, verifies, and tests before acting."
         }
       }
     }

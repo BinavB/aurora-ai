@@ -28,9 +28,15 @@ class RoutedService:
     alternative exists.
     """
 
-    def __init__(self, router: Router, factory: ProviderFactory) -> None:
+    def __init__(
+        self,
+        router: Router,
+        factory: ProviderFactory,
+        system_prompt: str | None = None,
+    ) -> None:
         self._router = router
         self._factory = factory
+        self._system_prompt = system_prompt
 
     async def _attempt(
         self, request: RoutingRequest, work: Work[R]

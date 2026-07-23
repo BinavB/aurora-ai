@@ -20,6 +20,17 @@ def system(content: str) -> Message:
     return Message(role=Role.SYSTEM, content=content)
 
 
+def lead_system(base: str | None, specialized: str) -> Message:
+    """Compose the shared engineering prompt with a role-specific one.
+
+    ``base`` is the single-source-of-truth ``AURORA_SYSTEM_PROMPT`` (or ``None``
+    when not configured); ``specialized`` is the agent's own instruction. The
+    base leads so every agent inherits the same engineering behavior without the
+    prompt being copied into each agent.
+    """
+    return system(f"{base}\n\n{specialized}" if base else specialized)
+
+
 def user(content: str) -> Message:
     """Build a user message."""
     return Message(role=Role.USER, content=content)

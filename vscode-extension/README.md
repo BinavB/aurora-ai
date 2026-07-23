@@ -38,22 +38,32 @@ AURORA_ENABLE_AGENT=1 uvicorn aurora.app.api.__main__:app --port 8000
 The autonomous agent stays **disabled** on the public/hosted backend for safety;
 enable it only on a local, trusted server.
 
-## Build & install locally
+## Release process
+
+Bump `version` in `package.json`, then build, package, and install:
 
 ```bash
 cd vscode-extension
 npm install
-npm run compile
-npx vsce package        # produces aurora-ai-0.1.0.vsix
+npm run compile                          # tsc -> dist/
+npx vsce package                         # -> aurora-ai-<version>.vsix
+code --install-extension aurora-ai-<version>.vsix --force
 ```
 
-Then in VS Code: **Extensions → ⋯ → Install from VSIX…** and pick the `.vsix`.
-
-## Publish to the Marketplace
+Then reload VS Code (**Developer: Reload Window**). To publish to the Marketplace:
 
 ```bash
-npx vsce login <publisher>   # create a publisher at https://marketplace.visualstudio.com/manage
+npx vsce login <publisher>   # create one at https://marketplace.visualstudio.com/manage
 npx vsce publish
 ```
+
+## Version notes
+
+- **0.3.0** — Adds the **engineer** persona (`aurora.persona: "engineer"`):
+  verify-before-answer, state assumptions/risks, explain decisions. Backed by the
+  backend's enforced engineering behavior (anti-hallucination guard, evidence
+  tracking, completion gate). Requires re-running the release steps above.
+- **0.2.0** — IDE-native agent: diff/apply for Implement, agent runs against the
+  open workspace, integrated terminal transcript, opens changed files.
 
 MIT licensed.

@@ -139,6 +139,22 @@ def test_vision_requirement_selects_gemini() -> None:
     assert d.provider == "gemini"
 
 
+def test_rank_by_strength_prefers_stronger_model() -> None:
+    ranked = _router(groq="gk").rank_by_strength(
+        RoutingRequest(task="x", kind=TaskKind.REVIEW), "reasoning"
+    )
+    models = [d.model for d in ranked]
+    # gpt-oss-120b (reasoning 3) outranks llama-3.3-70b (reasoning 2)
+    assert models.index("openai/gpt-oss-120b") < models.index("llama-3.3-70b-versatile")
+
+
+def test_strongest_model_for_coding_is_codestral() -> None:
+    model = _router(mistral="mk").strongest_model(
+        RoutingRequest(task="x", kind=TaskKind.IMPLEMENT), "coding"
+    )
+    assert model == "codestral-latest"  # coding 3, faster than local devstral
+
+
 def test_no_candidate_raises_router_error() -> None:
     # Offline + vision: no local model has vision.
     with pytest.raises(RouterError):

@@ -24,33 +24,41 @@ from aurora.app.api.schemas import (
     KeysBody,
     PlanBody,
     ReviewBody,
+    TaskBody,
 )
 from aurora.app.config.loader import load_settings
 from aurora.app.config.models import AppSettings
 from aurora.app.core.events import EventBus
 from aurora.app.core.exceptions import AuroraError, ValidationError
 from aurora.app.core.logging import configure_logging, get_logger
+from aurora.app.core.prompts import AURORA_SYSTEM_PROMPT
 from aurora.app.database.engine import Database
 from aurora.app.memory.store import MemoryStore
 from aurora.app.providers.registry import registered_providers
 from aurora.app.router.catalog import build_catalog
 from aurora.app.router.models import Capability, TaskKind
 from aurora.app.router.router import Router
+from aurora.app.services.agent_pipeline import AgentPipeline
 from aurora.app.services.autonomous_service import AutonomousService
 from aurora.app.services.chat_service import ChatService
 from aurora.app.services.collaboration_service import CollaborationService, Effort
+from aurora.app.services.execution_service import ExecutionService
 from aurora.app.services.factory import DefaultProviderFactory, ProviderFactory
 from aurora.app.services.implementation_service import ImplementationService
+from aurora.app.services.memory_service import MemoryService
 from aurora.app.services.models import (
     AgentResult,
     ChatReply,
     ImplementResult,
+    PipelineResult,
     PlanResult,
     ReviewOutcome,
 )
 from aurora.app.services.planning_service import PlanningService
 from aurora.app.services.review_service import ReviewService
+from aurora.app.services.task_service import TaskService
 from aurora.app.services.transcription_service import TranscriptionService
+from aurora.app.services.verification_service import VerificationService
 from aurora.app.tools.filesystem import filesystem_registry
 from aurora.app.tools.terminal import terminal_registry
 from aurora.app.tools.web import web_registry
@@ -84,6 +92,8 @@ def create_app(
     router = router or Router(build_catalog(settings))
     factory = factory or DefaultProviderFactory(settings, events)
     workspace_root = workspace_root or os.getcwd()
+    # The single engineering system prompt every agent inherits by default.
+    system_prompt = system_prompt or AURORA_SYSTEM_PROMPT
 
     def resolve_workspace(requested: str | None) -> str:
         """Resolve the workspace for a request.
@@ -103,11 +113,19 @@ def create_app(
         return str(Path(requested).resolve())
 
     chat = ChatService(router, factory, memory, system_prompt)
-    planning = PlanningService(router, factory)
-    review = ReviewService(router, factory)
-    implementation = ImplementationService(router, factory)
-    collaboration = CollaborationService(router, factory)
-    autonomous = AutonomousService(router, factory)
+    planning = PlanningService(router, factory, system_prompt)
+    review = ReviewService(router, factory, system_prompt)
+    implementation = ImplementationService(router, factory, system_prompt)
+    collaboration = CollaborationService(router, factory, system_prompt)
+    autonomous = AutonomousService(router, factory, system_prompt)
+    pipeline = AgentPipeline(
+        TaskService(),
+        planning,
+        ExecutionService(autonomous),
+        VerificationService(router, factory, system_prompt),
+        MemoryService(memory),
+        router,
+    )
     transcription = transcription or TranscriptionService()
 
     @asynccontextmanager
@@ -228,6 +246,17 @@ def create_app(
         @app.post("/agent")
         async def run_agent(body: AgentBody) -> AgentResult:
             return await autonomous.run(
+                body.task,
+                resolve_workspace(body.workspace),
+                max_steps=body.max_steps,
+                offline=body.offline,
+                prefer_provider=body.prefer_provider,
+                prefer_model=body.prefer_model,
+            )
+
+        @app.post("/task")
+        async def run_task(body: TaskBody) -> PipelineResult:
+            return await pipeline.run(
                 body.task,
                 resolve_workspace(body.workspace),
                 max_steps=body.max_steps,

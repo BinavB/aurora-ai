@@ -18,6 +18,7 @@ _TEXT: Final = frozenset({C.CHAT, C.CODE, C.REASONING, C.TOOLS, C.LONG_CONTEXT})
 _CODE: Final = frozenset({C.CHAT, C.CODE, C.TOOLS, C.LONG_CONTEXT})
 
 # Every model referenced by the routing chains, plus a local catch-all.
+# ``strengths`` are relative skill levels (0-3) for model-aware assignment.
 _DEFAULT_MODELS: Final[tuple[ModelProfile, ...]] = (
     # Google Gemini (free tier — flash only; Pro requires billing)
     ModelProfile(
@@ -26,6 +27,7 @@ _DEFAULT_MODELS: Final[tuple[ModelProfile, ...]] = (
         capabilities=_ALL,
         cost_per_1k=0.0,
         latency_ms=300,
+        strengths={"context": 3, "vision": 3, "reasoning": 2, "coding": 2},
     ),
     # Groq (free tier)
     ModelProfile(
@@ -34,6 +36,7 @@ _DEFAULT_MODELS: Final[tuple[ModelProfile, ...]] = (
         capabilities=_TEXT,
         cost_per_1k=0.0,
         latency_ms=120,
+        strengths={"reasoning": 2, "coding": 2},
     ),
     ModelProfile(
         provider="groq",
@@ -41,6 +44,7 @@ _DEFAULT_MODELS: Final[tuple[ModelProfile, ...]] = (
         capabilities=_TEXT,
         cost_per_1k=0.0,
         latency_ms=200,
+        strengths={"reasoning": 3, "coding": 2},
     ),
     ModelProfile(  # free vision model — fallback for images when Gemini is busy
         provider="groq",
@@ -48,6 +52,7 @@ _DEFAULT_MODELS: Final[tuple[ModelProfile, ...]] = (
         capabilities=frozenset({C.CHAT, C.CODE, C.VISION, C.TOOLS, C.LONG_CONTEXT}),
         cost_per_1k=0.0,
         latency_ms=250,
+        strengths={"vision": 2, "coding": 2, "reasoning": 1},
     ),
     ModelProfile(
         provider="groq",
@@ -55,6 +60,7 @@ _DEFAULT_MODELS: Final[tuple[ModelProfile, ...]] = (
         capabilities=_TEXT,
         cost_per_1k=0.0,
         latency_ms=220,
+        strengths={"reasoning": 2, "coding": 2},
     ),
     # OpenRouter (free variants; needs OPENROUTER_API_KEY)
     ModelProfile(
@@ -63,6 +69,7 @@ _DEFAULT_MODELS: Final[tuple[ModelProfile, ...]] = (
         capabilities=_TEXT,
         cost_per_1k=0.0,
         latency_ms=500,
+        strengths={"reasoning": 2, "coding": 2},
     ),
     ModelProfile(
         provider="openrouter",
@@ -70,6 +77,7 @@ _DEFAULT_MODELS: Final[tuple[ModelProfile, ...]] = (
         capabilities=_TEXT,
         cost_per_1k=0.0,
         latency_ms=700,
+        strengths={"reasoning": 3, "coding": 2},  # R1: reasoning high, coding medium
     ),
     # Mistral (free tier)
     ModelProfile(
@@ -78,6 +86,7 @@ _DEFAULT_MODELS: Final[tuple[ModelProfile, ...]] = (
         capabilities=_CODE,
         cost_per_1k=0.0,
         latency_ms=250,
+        strengths={"coding": 3, "reasoning": 2},  # Codestral: coding high
     ),
     # Local Ollama (offline; qwen3/devstral require `ollama pull`)
     ModelProfile(
@@ -87,6 +96,7 @@ _DEFAULT_MODELS: Final[tuple[ModelProfile, ...]] = (
         cost_per_1k=0.0,
         is_local=True,
         latency_ms=250,
+        strengths={"coding": 2, "reasoning": 2},
     ),
     ModelProfile(
         provider="ollama",
@@ -95,6 +105,7 @@ _DEFAULT_MODELS: Final[tuple[ModelProfile, ...]] = (
         cost_per_1k=0.0,
         is_local=True,
         latency_ms=500,
+        strengths={"reasoning": 2, "coding": 2},
     ),
     ModelProfile(
         provider="ollama",
@@ -103,6 +114,7 @@ _DEFAULT_MODELS: Final[tuple[ModelProfile, ...]] = (
         cost_per_1k=0.0,
         is_local=True,
         latency_ms=500,
+        strengths={"coding": 3, "reasoning": 2},  # Devstral: coding high
     ),
     ModelProfile(
         provider="ollama",
@@ -111,6 +123,7 @@ _DEFAULT_MODELS: Final[tuple[ModelProfile, ...]] = (
         cost_per_1k=0.0,
         is_local=True,
         latency_ms=200,
+        strengths={"coding": 1, "reasoning": 1},
     ),
 )
 

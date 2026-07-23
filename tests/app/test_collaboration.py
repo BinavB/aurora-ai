@@ -62,10 +62,13 @@ async def test_balanced_effort_dispatches_two_specialists_plus_synth() -> None:
     assert result.roster[-1].startswith("Synthesizer")
 
 
-async def test_max_effort_uses_more_specialists() -> None:
+async def test_max_effort_adds_critic_and_judge() -> None:
     result = await _service().collaborate(
         TaskKind.REVIEW, "def f(): pass", effort=Effort.MAX
     )
-    # dispatcher + 3 specialists + synthesizer
-    assert len(result.roster) == 5
+    # dispatcher + 3 specialists + critic + judge + synthesizer
+    assert len(result.roster) == 7
     assert result.roster[0].startswith("Dispatcher")
+    assert any(r.startswith("Critic") for r in result.roster)
+    assert any(r.startswith("Judge") for r in result.roster)
+    assert result.roster[-1].startswith("Synthesizer")

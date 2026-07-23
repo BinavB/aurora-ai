@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from aurora.app.agents.models import (
     AutonomousReport,
@@ -73,3 +73,55 @@ class AgentResult(BaseModel):
     provider: str
     model: str
     report: AutonomousReport
+
+
+# --- agentic pipeline (Intent -> Plan -> Execute -> Verify -> Learn) --------
+class TaskSpec(BaseModel):
+    """The understood form of a request: the Intent stage's output."""
+
+    objective: str
+    intent: str  # a TaskKind value (chat/plan/review/implement/...)
+    constraints: list[str] = Field(default_factory=list)
+
+
+class VerificationReport(BaseModel):
+    """The Verify stage's judgement of whether execution met the objective."""
+
+    provider: str
+    model: str
+    passed: bool
+    summary: str
+    issues: list[str] = Field(default_factory=list)
+
+
+class MemoryReceipt(BaseModel):
+    """The Learn stage's record of what was persisted."""
+
+    stored: bool
+    record_id: int | None = None
+
+
+class PipelineAttempt(BaseModel):
+    """One execute→verify attempt within the pipeline's retry escalation."""
+
+    strategy: str
+    provider: str
+    model: str
+    verified: bool
+
+
+class PipelineResult(BaseModel):
+    """The end-to-end outcome of the agentic pipeline.
+
+    ``status`` is ``COMPLETE`` when verification passed, else ``NEEDS_INPUT``.
+    ``attempts`` records the escalation history (strategy + model + verdict).
+    """
+
+    objective: str
+    intent: str
+    plan: Plan
+    execution: AgentResult
+    verification: VerificationReport
+    memory: MemoryReceipt
+    status: str = "COMPLETE"
+    attempts: list[PipelineAttempt] = Field(default_factory=list)

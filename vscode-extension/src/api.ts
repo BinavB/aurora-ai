@@ -99,6 +99,9 @@ export function withPersona(text: string): string {
     professional: "Respond in a concise, professional, businesslike tone.",
     hype: "Respond with high energy and enthusiasm.",
     socratic: "Respond by guiding with thoughtful questions and reasoning.",
+    engineer:
+      "Respond as a senior engineer: verify against the code before answering, " +
+      "state assumptions and risks, and explain decisions. Do not guess.",
   };
   const style = styles[persona];
   return style ? `[Style: ${style}]\n\n${text}` : text;

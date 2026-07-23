@@ -8,18 +8,13 @@ from aurora.app.agents.planner import PlannerAgent
 from aurora.app.context.engine import ContextEngine
 from aurora.app.context.models import ContextRequest
 from aurora.app.router.models import RoutingRequest, TaskKind
-from aurora.app.router.router import Router
 from aurora.app.services.base import RoutedService
-from aurora.app.services.factory import ProviderFactory
 from aurora.app.services.models import PlanResult
 from aurora.app.tools.filesystem import filesystem_registry
 
 
 class PlanningService(RoutedService):
     """Coordinate context building and planning for a task."""
-
-    def __init__(self, router: Router, factory: ProviderFactory) -> None:
-        super().__init__(router, factory)
 
     async def plan(
         self,
@@ -44,7 +39,7 @@ class PlanningService(RoutedService):
             context = await ContextBuilderAgent(engine).run(
                 ContextRequest(query=task, max_tokens=decision.context_max_tokens)
             )
-            plan = await PlannerAgent(provider, decision.model).run(
+            plan = await PlannerAgent(provider, decision.model, self._system_prompt).run(
                 PlannerInput(task=task, context_messages=context.messages)
             )
             return context, plan

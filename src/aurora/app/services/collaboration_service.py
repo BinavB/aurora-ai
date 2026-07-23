@@ -8,7 +8,9 @@ a one-pass DAG with no agent-to-agent chatter and no loops.
 Effort:
     fast     — one fastest agent, minimal latency.
     balanced — dispatcher picks 2 specialists + a synthesizer.
-    max      — dispatcher picks 3 powerful specialists + a synthesizer.
+    max      — dispatcher + 3 specialists + a critic + a judge + a synthesizer;
+               the synthesizer must address the critic's feedback and the
+               judge's ruling.
 """
 
 from __future__ import annotations
@@ -19,7 +21,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel
 
-from aurora.app.agents.llm import system, user
+from aurora.app.agents.llm import lead_system, user
 from aurora.app.core.logging import get_logger
 from aurora.app.router.models import RoutingRequest, TaskKind
 from aurora.app.services.base import RoutedService
@@ -78,7 +80,11 @@ class CollaborationService(RoutedService):
         if effort is Effort.FAST:
             decision, text = await self._complete(
                 RoutingRequest(task=task, kind=TaskKind.CHAT),
-                [system("Answer well and concisely."), *context, user(task)],
+                [
+                    lead_system(self._system_prompt, "Answer well and concisely."),
+                    *context,
+                    user(task),
+                ],
                 max_tokens=draft_cap,
             )
             return CollabResult(
@@ -96,7 +102,7 @@ class CollaborationService(RoutedService):
             )
             decision, text = await self._complete(
                 RoutingRequest(task=task, kind=kind),
-                [system(prompt), *context, user(task)],
+                [lead_system(self._system_prompt, prompt), *context, user(task)],
                 max_tokens=draft_cap,
             )
             return focus, f"{decision.provider}/{decision.model}", text
@@ -113,20 +119,65 @@ class CollaborationService(RoutedService):
             return CollabResult(content=good[0][2], roster=roster)
 
         block = "\n\n".join(f"[{focus}]\n{text}" for focus, _, text in good)
-        merge = (
-            f"Task:\n{task}\n\nSpecialist drafts:\n{block}\n\nProduce the final result."
-        )
+
+        # MAX adds an adversarial pass: a critic finds flaws, a judge rules on
+        # what the answer must include, and the synthesizer cannot ignore them.
+        guidance = ""
+        if effort is Effort.MAX:
+            guidance, extra = await self._critique(task, block, draft_cap)
+            roster += extra
+
+        merge = f"Task:\n{task}\n\nSpecialist drafts:\n{block}"
+        synth_system = "Merge the specialist drafts into one cohesive result."
+        if guidance:
+            merge += f"\n\n{guidance}"
+            synth_system += (
+                " You MUST incorporate the critic's feedback and the judge's "
+                "ruling; do not ignore them."
+            )
+        merge += "\n\nProduce the final result."
+
         synth_kind = kind if effort is Effort.MAX else TaskKind.CHAT
         decision, final = await self._complete(
             RoutingRequest(task=task, kind=synth_kind),
-            [
-                system("Merge the specialist drafts into one cohesive result."),
-                user(merge),
-            ],
+            [lead_system(self._system_prompt, synth_system), user(merge)],
             max_tokens=synth_cap,
         )
         roster.append(f"Synthesizer · {decision.provider}/{decision.model}")
         return CollabResult(content=final, roster=roster)
+
+    async def _critique(self, task: str, block: str, cap: int) -> tuple[str, list[str]]:
+        """Run a critic then a judge over the drafts (MAX only)."""
+        crit_decision, critique = await self._complete(
+            RoutingRequest(task=task, kind=TaskKind.REVIEW),
+            [
+                lead_system(
+                    self._system_prompt,
+                    "You are a critic. List concrete flaws, gaps, and risks in "
+                    "these drafts as bullet points.",
+                ),
+                user(f"Task:\n{task}\n\nDrafts:\n{block}"),
+            ],
+            max_tokens=cap,
+        )
+        judge_decision, ruling = await self._complete(
+            RoutingRequest(task=task, kind=TaskKind.REVIEW),
+            [
+                lead_system(
+                    self._system_prompt,
+                    "You are a judge. Given the drafts and the critic's notes, "
+                    "rule on what the final answer must include and prioritize.",
+                ),
+                user(f"Task:\n{task}\n\nDrafts:\n{block}\n\nCritic notes:\n{critique}"),
+            ],
+            max_tokens=cap,
+        )
+        guidance = f"Critic notes (address all):\n{critique}\n\nJudge's ruling:\n{ruling}"
+        roster = [
+            f"Critic · {crit_decision.provider}/{crit_decision.model}",
+            f"Judge · {judge_decision.provider}/{judge_decision.model}",
+        ]
+        return guidance, roster
 
     async def _assign(
         self, kind: TaskKind, task: str, count: int
@@ -140,7 +191,13 @@ class CollaborationService(RoutedService):
         try:
             decision, text = await self._complete(
                 RoutingRequest(task=task, kind=TaskKind.CHAT),
-                [system("You assign specialists. Reply with only the list."), user(ask)],
+                [
+                    lead_system(
+                        self._system_prompt,
+                        "You assign specialists. Reply with only the list.",
+                    ),
+                    user(ask),
+                ],
                 max_tokens=60,
             )
             parts = [p.strip(" -*•\t.").strip() for p in re.split(r"[,\n]", text)]

@@ -82,6 +82,33 @@ class Router:
 
         return [self._to_decision(profile, request) for profile in ordered]
 
+    def rank_by_strength(
+        self, request: RoutingRequest, skill: str
+    ) -> list[RoutingDecision]:
+        """Rank viable models by a named skill (model-aware assignment).
+
+        Strongest ``skill`` first, then cheapest and fastest. Used to assign the
+        right model to a role (e.g. a reasoning-heavy retry) rather than always
+        following the default chain.
+        """
+        pool = self._filter(request)
+        pool.sort(
+            key=lambda m: (
+                -m.strengths.get(skill, 0),
+                m.cost_per_1k,
+                m.latency_ms,
+                m.model,
+            )
+        )
+        if request.prefer_model or request.prefer_provider:
+            pool.sort(key=lambda m: 0 if self._is_preferred(m, request) else 1)
+        return [self._to_decision(profile, request) for profile in pool]
+
+    def strongest_model(self, request: RoutingRequest, skill: str) -> str | None:
+        """Return the id of the strongest available model for ``skill``, if any."""
+        ranked = self.rank_by_strength(request, skill)
+        return ranked[0].model if ranked else None
+
     @staticmethod
     def _is_preferred(model: ModelProfile, request: RoutingRequest) -> bool:
         if request.prefer_model:

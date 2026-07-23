@@ -95,7 +95,8 @@ def test_chat_endpoint(tmp_path: Path) -> None:
     assert res.status_code == 200
     body = res.json()
     assert body["provider"] == "ollama"
-    assert body["content"] == "echo[1]: hi"
+    # 2 messages: the injected AURORA system prompt + the user turn.
+    assert body["content"] == "echo[2]: hi"
 
 
 def test_chat_stream_is_sse(tmp_path: Path) -> None:
@@ -114,7 +115,7 @@ def test_chat_stream_is_sse(tmp_path: Path) -> None:
     ]
     done = next(f for f in frames if f["type"] == "done")
     assert done["provider"] == "ollama"
-    assert done["content"] == "echo[1]: hi there"
+    assert done["content"] == "echo[2]: hi there"
 
 
 def test_chat_websocket_streams_tokens(tmp_path: Path) -> None:
@@ -124,9 +125,9 @@ def test_chat_websocket_streams_tokens(tmp_path: Path) -> None:
         while (msg := ws.receive_json())["type"] != "done":
             tokens.append(msg["content"])
         # Real deltas reassemble into the full reply; the done frame carries meta.
-        assert "".join(tokens) == "echo[1]: hi"
+        assert "".join(tokens) == "echo[2]: hi"
         assert msg["provider"] == "ollama"
-        assert msg["content"] == "echo[1]: hi"
+        assert msg["content"] == "echo[2]: hi"
 
 
 def test_chat_websocket_sends_structured_error_instead_of_crashing(

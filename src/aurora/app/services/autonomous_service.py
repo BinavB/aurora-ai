@@ -11,9 +11,7 @@ from __future__ import annotations
 from aurora.app.agents.autonomous import AutonomousAgent
 from aurora.app.agents.models import AutonomousInput
 from aurora.app.router.models import RoutingRequest, TaskKind
-from aurora.app.router.router import Router
 from aurora.app.services.base import RoutedService
-from aurora.app.services.factory import ProviderFactory
 from aurora.app.services.models import AgentResult
 from aurora.app.tools.filesystem import filesystem_registry
 from aurora.app.tools.git import git_registry
@@ -40,9 +38,6 @@ def combined_registry(workspace: str) -> ToolRegistry:
 class AutonomousService(RoutedService):
     """Coordinate routing and the autonomous tool-using loop."""
 
-    def __init__(self, router: Router, factory: ProviderFactory) -> None:
-        super().__init__(router, factory)
-
     async def run(
         self,
         task: str,
@@ -65,9 +60,9 @@ class AutonomousService(RoutedService):
         tools = combined_registry(workspace)
 
         async def work(decision, provider):
-            return await AutonomousAgent(provider, decision.model, tools).run(
-                AutonomousInput(task=task, max_steps=max_steps)
-            )
+            return await AutonomousAgent(
+                provider, decision.model, tools, self._system_prompt
+            ).run(AutonomousInput(task=task, max_steps=max_steps))
 
         decision, report = await self._attempt(request, work)
         return AgentResult(
