@@ -95,7 +95,7 @@ def test_chat_endpoint(tmp_path: Path) -> None:
     assert res.status_code == 200
     body = res.json()
     assert body["provider"] == "ollama"
-    assert body["content"] == "echo[1]: hi"
+    assert body["content"] == "echo[2]: hi"
 
 
 def test_chat_stream_is_sse(tmp_path: Path) -> None:
@@ -112,7 +112,7 @@ def test_chat_websocket_streams_tokens(tmp_path: Path) -> None:
         tokens = []
         while (msg := ws.receive_json())["type"] != "done":
             tokens.append(msg["content"])
-        assert tokens == ["echo[1]:", "hi"]
+        assert tokens == ["echo[2]:", "hi"]
 
 
 def test_chat_websocket_sends_structured_error_instead_of_crashing(

@@ -5,6 +5,7 @@ from __future__ import annotations
 from aurora.app.agents.conversation import ConversationAgent
 from aurora.app.agents.llm import system as system_msg
 from aurora.app.agents.models import ConversationTurn
+from aurora.app.core.constants import AURORA_IDENTITY_PROMPT
 from aurora.app.core.types import Message, Role
 from aurora.app.memory.store import MemoryStore
 from aurora.app.router.intent import classify_intent
@@ -27,7 +28,7 @@ class ChatService(RoutedService):
     ) -> None:
         super().__init__(router, factory)
         self._memory = memory
-        self._system_prompt = system_prompt
+        self._system_prompt = system_prompt or AURORA_IDENTITY_PROMPT
 
     async def chat(
         self,

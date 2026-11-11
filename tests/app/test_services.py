@@ -6,7 +6,7 @@ from pathlib import Path
 
 from aurora.app.config.models import AppSettings, ProviderSettings
 from aurora.app.core.exceptions import ProviderRequestError
-from aurora.app.core.types import ChatRequest, ChatResponse
+from aurora.app.core.types import ChatRequest, ChatResponse, Role
 from aurora.app.database import Database
 from aurora.app.memory import MemoryStore
 from aurora.app.providers.base import BaseProvider
@@ -103,10 +103,36 @@ async def test_chat_service_routes_persists_and_closes_provider() -> None:
 
     reply = await service.chat("s", "hello")
     assert reply.provider == "ollama"  # free local model wins for plain chat
-    assert reply.content == "echo[1]: hello"
+    assert reply.content == "echo[2]: hello"
     assert len(await store.conversation("s")) == 2
     assert provider.closed is True  # provider lifecycle handled by the service
     assert factory.created == ["ollama"]
+
+
+class _CapturingProvider(EchoProvider):
+    """Echo provider that keeps the last request it received."""
+
+    def __init__(self) -> None:
+        super().__init__(ProviderSettings(base_url="http://echo.local"))
+        self.last_request: ChatRequest | None = None
+
+    async def _chat(self, request: ChatRequest) -> ChatResponse:
+        self.last_request = request
+        return await super()._chat(request)
+
+
+async def test_chat_leads_with_aurora_identity() -> None:
+    provider = _CapturingProvider()
+    store = MemoryStore(Database())
+    await store.open()
+    service = ChatService(_router(), FakeFactory(provider), store)
+
+    await service.chat("s", "who made you?")
+
+    assert provider.last_request is not None
+    first = provider.last_request.messages[0]
+    assert first.role is Role.SYSTEM
+    assert "Aurora" in first.content and "Binav" in first.content
 
 
 # --- planning -------------------------------------------------------------
