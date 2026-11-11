@@ -103,6 +103,14 @@
       .msg .bubble.md { white-space: normal; }
       .bubble.md strong { color: #fff; font-weight: 700; }
       .bubble.md em { font-style: italic; }
+      .bubble.md p { margin: 0 0 0.65rem; }
+      .bubble.md p:last-child, .bubble.md ul.md:last-child, .bubble.md ol.md:last-child { margin-bottom: 0; }
+      .bubble.md .md-h { color: #fff; font-weight: 700; margin: 0.85rem 0 0.35rem; }
+      .bubble.md > .md-h:first-child { margin-top: 0; }
+      .bubble.md ol.md { margin: 0.4rem 0 0.65rem; padding-left: 1.4rem; }
+      .bubble.md ul.md { margin-bottom: 0.65rem; }
+      .bubble.md li { margin: 0.28rem 0; }
+      .iconbtn.speaking { border-color: var(--accent-lt); color: var(--accent-lt); animation: recpulse 1.1s infinite; }
       .bubble.md code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.86em; background: rgba(0,0,0,0.32); border: 1px solid var(--stroke); border-radius: 6px; padding: 0.05rem 0.34rem; }
       .bubble.md pre.code { margin: 0.55rem 0; padding: 0.7rem 0.85rem; background: rgba(0,0,0,0.36); border: 1px solid var(--stroke); border-radius: 12px; overflow-x: auto; font-size: 0.84rem; line-height: 1.5; }
       .bubble.md ul.md { margin: 0.4rem 0; padding-left: 1.2rem; }
@@ -348,6 +356,7 @@
         <span class="spacer"></span>
         <button class="pill install-btn" id="installBtn" type="button" hidden aria-label="Install app"><svg class="install-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m6 10 6 6 6-6"/><path d="M4 21h16"/></svg><span class="install-label">Install app</span></button>
         <button class="pill google-btn" id="signInBtn" type="button" hidden aria-label="Sign in with Google"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg><span class="google-label">Sign in</span></button>
+        <button class="pill" id="headerNewBtn" type="button" title="Start a new chat">＋ New</button>
         <span class="pill" id="engine" title="Active engine (auto-selected)">✨ auto</span>
         <button class="avatar-btn" id="accountBtn" type="button" hidden aria-label="Account and saved chats"></button>
       </header>
@@ -535,8 +544,52 @@
         try {
           const cap = await (await fetch("/capabilities")).json();
           $("#attachBtn").hidden = !cap.vision;
-          $("#micBtn").hidden = !cap.audio;
+          serverAudio = !!cap.audio;
+          refreshVoiceUi();
         } catch { /* leave hidden */ }
+      }
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+      const canSpeak = "speechSynthesis" in window;
+      let serverAudio = false, speakingUtterance = null;
+      const spokenText = (text) => String(text).replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/https?:\/\/\S+/g, "").replace(/^\s*[-*_]{3,}\s*$/gm, "").replace(/[*_`#>|]/g, " ").slice(0, 4000);
+      function refreshVoiceUi() {
+        const mic = $("#micBtn");
+        const speaking = speakingUtterance !== null;
+        mic.hidden = !(speaking || SpeechRec || serverAudio);
+        mic.classList.toggle("speaking", speaking);
+        if (speaking) { mic.textContent = "⏹"; mic.title = "Stop reading aloud"; }
+        else if (!mic.classList.contains("rec")) { mic.textContent = "🎙️"; mic.title = "Speak your message"; }
+        document.querySelectorAll(".speak").forEach((b) => { b.textContent = b.dataset.active ? "⏹ stop" : "🔊 read"; });
+      }
+      function stopSpeaking() {
+        speakingUtterance = null;
+        document.querySelectorAll(".speak").forEach((b) => delete b.dataset.active);
+        if (canSpeak) speechSynthesis.cancel();
+        refreshVoiceUi();
+      }
+      function speak(text, button) {
+        if (!canSpeak) return;
+        speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(spokenText(text));
+        utterance.lang = "en-GB";
+        const finish = () => { if (speakingUtterance === utterance) stopSpeaking(); };
+        utterance.onend = finish; utterance.onerror = finish;
+        speakingUtterance = utterance;
+        document.querySelectorAll(".speak").forEach((b) => delete b.dataset.active);
+        if (button) button.dataset.active = "1";
+        refreshVoiceUi();
+        speechSynthesis.speak(utterance);
+      }
+      function speakBtn(text) {
+        if (!canSpeak) return document.createDocumentFragment();
+        const b = document.createElement("button"); b.type = "button"; b.className = "copy speak"; b.textContent = "🔊 read";
+        b.onclick = () => { if (b.dataset.active) stopSpeaking(); else speak(text, b); };
+        return b;
+      }
+      function replyMeta(raw, label) {
+        const meta = document.createElement("div"); meta.className = "meta"; meta.textContent = label || "";
+        meta.appendChild(copyBtn(raw)); meta.appendChild(speakBtn(raw));
+        return meta;
       }
       function copyBtn(text) { const b = document.createElement("button"); b.type = "button"; b.className = "copy"; b.textContent = "copy"; b.onclick = () => { navigator.clipboard.writeText(text); b.textContent = "copied"; setTimeout(() => (b.textContent = "copy"), 1200); }; return b; }
 
@@ -573,48 +626,86 @@
           return joined + part + (label.toLowerCase() === "binav.b" ? `[${label}](${BINAV_SEARCH_URL})` : link);
         }, "");
       }
+      const RULE_LINE = /^\s*([-*_])(?:\s*\1){2,}\s*$/;
+      const LIST_LINE = /^(\s*)(?:([-*•])|(\d+)[.)])\s+(.*)$/;
+      const SECTION_TITLE = /^\p{Extended_Pictographic}/u;
+      const tableCells = (line) => line.trim().replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim());
+      const isSeparatorRow = (line) => tableCells(line).every((cell) => /^:?-{2,}:?$/.test(cell));
+      function inlineMd(text) {
+        let h = esc(text).replace(/\s*—\s*/g, ", ").replace(/\s–\s/g, ", ");
+        h = h.replace(/`([^`]+)`/g, "<code>$1</code>");
+        h = h.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/__([^_\s][^_]*)__/g, "<strong>$1</strong>");
+        h = h.replace(/(^|[^*\w])\*([^*\s][^*]*)\*(?!\w)/g, "$1<em>$2</em>");
+        h = h.replace(/\*\*/g, "");
+        h = h.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+        return h.replace(/(^|[\s(])(https?:\/\/[^\s<)]*[^\s<).,;:!?])/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+      }
+      function tableHtml(rows) {
+        const [head, ...rest] = rows.filter((row) => !isSeparatorRow(row)).map(tableCells);
+        const heads = head.map((cell) => `<th>${inlineMd(cell)}</th>`).join("");
+        const body = rest.map((cells) => `<tr>${cells.map((cell) => `<td>${inlineMd(cell)}</td>`).join("")}</tr>`).join("");
+        return `<div class="table-wrap"><table><thead><tr>${heads}</tr></thead><tbody>${body}</tbody></table></div>`;
+      }
+      function listHtml(items) {
+        let html = "", open = null;
+        const close = () => { if (open) html += open.ordered ? "</li></ol>" : "</li></ul>"; open = null; };
+        for (const item of items) {
+          if (!open || open.ordered !== item.ordered) {
+            close();
+            open = { ordered: item.ordered };
+            html += item.ordered ? `<ol class="md" start="${item.number}"><li>` : '<ul class="md"><li>';
+          } else {
+            html += "</li><li>";
+          }
+          html += inlineMd(item.text);
+        }
+        close();
+        return html;
+      }
       function mdToHtml(src) {
         const blocks = [];
-        // fenced code blocks (protect contents from other rules)
-        src = String(src).replace(/```(\w*)\n?([\s\S]*?)```/g, (_, _lang, code) => {
+        src = String(src).replace(/```(\w*)\n?([\s\S]*?)(?:```|$)/g, (_, _lang, code) => {
           blocks.push(`<pre class="code">${esc(code.replace(/\n$/, ""))}</pre>`);
-          return `\u0000${blocks.length - 1}\u0000`;
+          return `\n\u0000${blocks.length - 1}\u0000\n`;
         });
         src = linkBinavHandle(src)
           .replace(/\s*【[^】]*】/g, "")
           .replace(/([.!?:)])[ \t]+(?=(?:[-*]|\d+\.)[ \t]+\*\*)/g, "$1\n");
-        let h = esc(src).replace(/\s*\u2014\s*/g, ", ").replace(/\s\u2013\s/g, ", ");
-        h = h.replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`);        // inline code
-        h = h.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");           // **bold**
-        h = h.replace(/__([^_]+)__/g, "<strong>$1</strong>");               // __bold__
-        h = h.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");           // *italic*
-        h = h.replace(/^\s*#{1,6}\s+(.+)$/gm, "<strong>$1</strong>");       // # heading
-        h = h.replace(
-          /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-          '<a href="$2" target="_blank" rel="noopener">$1</a>'
-        );
-        h = h.replace(
-          /(^|[\s(])(https?:\/\/[^\s<)]*[^\s<).,;:!?])/g,
-          '$1<a href="$2" target="_blank" rel="noopener">$2</a>'
-        );
-        // group consecutive bullet / numbered lines into a list
-        h = h.replace(/^(?:\s*(?:[-*]|\d+\.)\s+.+(?:\n|$))+/gm, (m) => {
-          const items = m.trim().split(/\n/)
-            .map((l) => `<li>${l.replace(/^\s*(?:[-*]|\d+\.)\s+/, "")}</li>`).join("");
-          return `<ul class="md">${items}</ul>`;
-        });
-        h = h.replace(/^(?:\|.*\|[ \t]*(?:\n|$))+/gm, (block) => {
-          const rows = block.trim().split("\n").map((line) => line.trim().replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim()));
-          const body = rows.filter((cells) => !cells.every((cell) => /^:?-{2,}:?$/.test(cell)));
-          if (body.length < 2) return block;
-          const [head, ...rest] = body;
-          const heads = head.map((cell) => `<th>${cell}</th>`).join("");
-          const lines = rest.map((cells) => `<tr>${cells.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("");
-          return `<div class="table-wrap"><table><thead><tr>${heads}</tr></thead><tbody>${lines}</tbody></table></div>`;
-        });
-        h = h.replace(/\n{2,}/g, "<br><br>").replace(/\n/g, "<br>");        // paragraphs
-        h = h.replace(/(<\/(?:ul|pre)>)(?:<br>)+/g, "$1");                  // trim breaks after blocks
-        return h.replace(/\u0000(\d+)\u0000/g, (_, i) => blocks[+i]);
+        const lines = src.split("\n");
+        const isBlockStart = (l) => RULE_LINE.test(l) || LIST_LINE.test(l) || /^\s*#{1,6}\s/.test(l) || /^\u0000\d+\u0000$/.test(l.trim());
+        const out = [];
+        let i = 0;
+        while (i < lines.length) {
+          const line = lines[i];
+          const code = line.trim().match(/^\u0000(\d+)\u0000$/);
+          if (!line.trim() || RULE_LINE.test(line)) { i++; continue; }
+          if (code) { out.push(blocks[+code[1]]); i++; continue; }
+          if (line.includes("|")) {
+            let end = i;
+            while (end < lines.length && lines[end].includes("|") && lines[end].trim()) end++;
+            const rows = lines.slice(i, end);
+            if (rows.length >= 2 && rows.some(isSeparatorRow)) { out.push(tableHtml(rows)); i = end; continue; }
+          }
+          const heading = line.match(/^\s*#{1,6}\s+(.+)$/);
+          if (heading) { out.push(`<div class="md-h">${inlineMd(heading[1])}</div>`); i++; continue; }
+          if (LIST_LINE.test(line)) {
+            const items = [];
+            while (i < lines.length) {
+              const match = lines[i].match(LIST_LINE);
+              if (match) { items.push({ ordered: !!match[3], number: +match[3] || 1, text: match[4] }); i++; continue; }
+              const next = lines.slice(i + 1).find((l) => l.trim());
+              if (!lines[i].trim() && next && LIST_LINE.test(next)) { i++; continue; }
+              break;
+            }
+            out.push(listHtml(items));
+            continue;
+          }
+          const para = [];
+          while (i < lines.length && lines[i].trim() && !isBlockStart(lines[i])) { para.push(lines[i].trim()); i++; }
+          const isTitle = para.length === 1 && SECTION_TITLE.test(para[0]) && para[0].length <= 70 && !/[.!?]$/.test(para[0]);
+          out.push(isTitle ? `<div class="md-h">${inlineMd(para[0])}</div>` : `<p>${para.map(inlineMd).join("<br>")}</p>`);
+        }
+        return out.join("");
       }
       function sourcesBox(sources) {
         if (!sources || sources.length === 0) return null;
@@ -715,32 +806,59 @@
         apply(); mq.addEventListener("change", apply);
       })();
 
-      /* ===== voice (Whisper) ===== */
+      /* ===== voice: browser speech first, Whisper as the fallback ===== */
       (() => {
         const micBtn = $("#micBtn"), input = $("#input");
-        let recorder = null, chunks = [], recording = false;
-        micBtn.addEventListener("click", async () => {
-          if (recording) { recorder.stop(); return; }
+        let recorder = null, chunks = [], recording = false, recognition = null;
+        const setRecording = (on) => { recording = on; micBtn.classList.toggle("rec", on); micBtn.textContent = on ? "⏺" : "🎙️"; refreshVoiceUi(); };
+        function listen() {
+          recognition = new SpeechRec();
+          recognition.lang = "en-GB"; recognition.interimResults = false; recognition.continuous = false;
+          recognition.onresult = (e) => {
+            const text = Array.from(e.results, (r) => r[0].transcript).join(" ").trim();
+            if (text) { input.value = (input.value ? input.value + " " : "") + text; autoGrow(); }
+          };
+          recognition.onend = () => { setRecording(false); input.focus(); };
+          recognition.onerror = () => { setRecording(false); const prev = input.placeholder; input.placeholder = "⚠ Couldn't hear you, try again"; setTimeout(() => (input.placeholder = prev), 3000); };
+          setRecording(true);
+          recognition.start();
+        }
+        async function record() {
           if (!navigator.mediaDevices?.getUserMedia) { alert("Microphone not supported."); return; }
           try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             chunks = []; recorder = new MediaRecorder(stream);
             recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
             recorder.onstop = async () => {
-              stream.getTracks().forEach((t) => t.stop()); recording = false; micBtn.classList.remove("rec"); micBtn.textContent = "🎙️";
+              stream.getTracks().forEach((t) => t.stop()); setRecording(false);
               const blob = new Blob(chunks, { type: "audio/webm" }); const prev = input.placeholder; input.placeholder = "transcribing…"; input.disabled = true;
               try { const fd = new FormData(); fd.append("audio", blob, "clip.webm"); const res = await fetch("/transcribe", { method: "POST", body: fd }); const data = await res.json(); if (!res.ok) throw new Error(friendly(data.code, data.message)); input.value = (input.value ? input.value+" " : "") + (data.text||"").trim(); input.placeholder = prev; autoGrow(); }
               catch (e) { input.placeholder = "⚠ " + e.message; setTimeout(() => (input.placeholder = prev), 3000); }
               finally { input.disabled = false; input.focus(); }
             };
-            recorder.start(); recording = true; micBtn.classList.add("rec"); micBtn.textContent = "⏺";
+            recorder.start(); setRecording(true);
           } catch (e) { alert("Microphone unavailable: " + e.message); }
+        }
+        micBtn.addEventListener("click", () => {
+          if (speakingUtterance) { stopSpeaking(); return; }
+          if (recording) { if (recognition) recognition.stop(); else recorder.stop(); return; }
+          if (SpeechRec) listen(); else record();
         });
+        refreshVoiceUi();
       })();
 
       /* ===== chat over WebSocket ===== */
       const newChatId = () => "c" + Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, "0")).join("");
-      let sessionId = newChatId();
+      const CHAT_KEY = "aurora.chat.v1";
+      const savedChat = (() => { try { const c = JSON.parse(localStorage.getItem(CHAT_KEY)); return c && Array.isArray(c.turns) ? c : { id: "", turns: [] }; } catch { return { id: "", turns: [] }; } })();
+      let sessionId = savedChat.id || newChatId();
+      function rememberLocally() { try { localStorage.setItem(CHAT_KEY, JSON.stringify(savedChat)); } catch { /* storage full or blocked */ } }
+      function resetSaved(id, turns) { savedChat.id = id; savedChat.turns = turns; rememberLocally(); }
+      function saveTurn(role, text) {
+        if (savedChat.id !== sessionId) resetSaved(sessionId, []);
+        savedChat.turns = [...savedChat.turns, { role, text }].slice(-200);
+        rememberLocally();
+      }
       let ws = null, pending = null;
       function connect() {
         const proto = location.protocol === "https:" ? "wss" : "ws";
@@ -748,7 +866,7 @@
         ws.onmessage = (ev) => {
           const m = JSON.parse(ev.data); if (!pending) return;
           if (m.type === "token") { if (pending.dataset.pending) { pending.textContent = ""; delete pending.dataset.pending; } pending.classList.add("cursor"); pending.textContent += (pending.textContent ? " " : "") + m.content; scrollDown(); }
-          else if (m.type === "done") { pending.classList.remove("cursor"); const raw = m.content || pending.textContent; pending.classList.add("md"); pending.innerHTML = mdToHtml(raw); const sources = sourcesBox(m.sources); if (sources) pending.parentElement.appendChild(sources); const meta = document.createElement("div"); meta.className = "meta"; meta.textContent = EFFORT_LABEL.fast; meta.appendChild(copyBtn(raw)); pending.parentElement.appendChild(meta); const hint = effortHint(m.recommended_effort, lastAsk.send, lastAsk.display); if (hint) pending.parentElement.appendChild(hint); setEngine(m.provider, m.model); pending = null; scrollDown(); }
+          else if (m.type === "done") { pending.classList.remove("cursor"); const raw = m.content || pending.textContent; pending.classList.add("md"); pending.innerHTML = mdToHtml(raw); const sources = sourcesBox(m.sources); if (sources) pending.parentElement.appendChild(sources); pending.parentElement.appendChild(replyMeta(raw, EFFORT_LABEL.fast)); saveTurn("aurora", raw); const hint = effortHint(m.recommended_effort, lastAsk.send, lastAsk.display); if (hint) pending.parentElement.appendChild(hint); setEngine(m.provider, m.model); pending = null; scrollDown(); }
           else if (m.type === "error") { pending.classList.remove("cursor"); pending.parentElement.classList.add("err"); pending.textContent = friendly(m.code, m.message); pending = null; scrollDown(); }
         };
         ws.onclose = () => setTimeout(connect, 1500);
@@ -757,7 +875,7 @@
       let lastAsk = { send: "", display: "" };
       function chatSend(sendText, displayText, images, rerun) {
         lastAsk = { send: sendText, display: displayText };
-        if (!rerun) addMsg("you", "user").textContent = displayText;
+        if (!rerun) { addMsg("you", "user").textContent = displayText; saveTurn("user", displayText); }
         pending = addMsg("aurora"); pending.innerHTML = thinking(); pending.dataset.pending = "1";
         const payload = { session_id: sessionId, message: sendText, ...routing() };
         if (images && images.length) payload.images = images;
@@ -795,7 +913,7 @@
         }
       }
       function startNewChat() {
-        sessionId = newChatId(); pending = null; lastAsk = { send: "", display: "" };
+        stopSpeaking(); sessionId = newChatId(); resetSaved(sessionId, []); pending = null; lastAsk = { send: "", display: "" };
         log.innerHTML = heroHtml;
       }
       function renderSaved(messages) {
@@ -804,14 +922,14 @@
           if (m.role === "user") { addMsg("you", "user").textContent = m.content; continue; }
           if (m.role !== "assistant") continue;
           const bubble = addMsg("aurora"); bubble.classList.add("md"); bubble.innerHTML = mdToHtml(m.content);
-          const meta = document.createElement("div"); meta.className = "meta"; meta.appendChild(copyBtn(m.content)); bubble.parentElement.appendChild(meta);
+          bubble.parentElement.appendChild(replyMeta(m.content, ""));
         }
       }
       async function openChat(id) {
         try {
           const res = await fetch("/chats/" + encodeURIComponent(id)); if (!res.ok) throw new Error();
           const { messages } = await res.json();
-          sessionId = id; pending = null; renderSaved(messages); accountPanel.hidden = true;
+          sessionId = id; pending = null; resetSaved(id, messages.filter((m) => m.role === "user" || m.role === "assistant").map((m) => ({ role: m.role === "user" ? "user" : "aurora", text: m.content }))); renderSaved(messages); accountPanel.hidden = true;
         } catch (e) { toast("Could not open that chat."); }
       }
       function chatRow(chat) {
@@ -840,12 +958,19 @@
       $("#accountClose").addEventListener("click", () => { accountPanel.hidden = true; });
       accountPanel.addEventListener("click", (e) => { if (e.target === accountPanel) accountPanel.hidden = true; });
       $("#newChatBtn").addEventListener("click", () => { startNewChat(); accountPanel.hidden = true; });
+      $("#headerNewBtn").addEventListener("click", startNewChat);
       $("#signOutBtn").addEventListener("click", async () => {
         await fetch("/auth/logout", { method: "POST" });
         accountPanel.hidden = true; showAccount(null); startNewChat();
         ws.onclose = null; ws.close(); connect();
       });
       loadAccount();
+      for (const turn of savedChat.turns) {
+        if (turn.role === "user") { addMsg("you", "user").textContent = turn.text; continue; }
+        const bubble = addMsg("aurora");
+        bubble.classList.add("md"); bubble.innerHTML = mdToHtml(turn.text);
+        bubble.parentElement.appendChild(replyMeta(turn.text, ""));
+      }
 
       /* ===== POST for plan/review/implement ===== */
       async function post(path, body, outEl, render) {
@@ -914,7 +1039,7 @@
         return hint;
       }
       function teamChat(task, display, rerun) {
-        if (!rerun) addMsg("you", "user").textContent = display;
+        if (!rerun) { addMsg("you", "user").textContent = display; saveTurn("user", display); }
         const bubble = addMsg("aurora");
         bubble.innerHTML = thinking(); scrollDown();
         fetch("/collaborate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ task, mode: "chat", effort }) })
@@ -924,10 +1049,8 @@
             bubble.classList.add("md");
             bubble.innerHTML = mdToHtml(d.content);
             const sources = sourcesBox(d.sources); if (sources) bubble.parentElement.appendChild(sources);
-            const meta = document.createElement("div"); meta.className = "meta";
-            meta.textContent = EFFORT_LABEL[d.effort_used || effort] + (d.roster.length > 1 ? " · team" : "");
-            meta.appendChild(copyBtn(d.content));
-            bubble.parentElement.appendChild(meta);
+            bubble.parentElement.appendChild(replyMeta(d.content, EFFORT_LABEL[d.effort_used || effort] + (d.roster.length > 1 ? " · team" : "")));
+            saveTurn("aurora", d.content);
             const hint = effortHint(d.recommended_effort, task, display);
             if (hint) bubble.parentElement.appendChild(hint);
             scrollDown();
