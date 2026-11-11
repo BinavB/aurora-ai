@@ -30,7 +30,7 @@ from aurora.app.config.models import AppSettings
 from aurora.app.core.events import EventBus
 from aurora.app.core.exceptions import AuroraError
 from aurora.app.core.logging import configure_logging, get_logger
-from aurora.app.database.engine import Database
+from aurora.app.database import build_database
 from aurora.app.memory.store import MemoryStore
 from aurora.app.providers.registry import registered_providers
 from aurora.app.router.catalog import build_catalog
@@ -81,7 +81,13 @@ def create_app(
         }
     configure_logging(settings.log_level)
     events = EventBus()
-    memory = memory or MemoryStore(Database(os.environ.get("AURORA_DB_PATH", ":memory:")))
+    memory = memory or MemoryStore(
+        build_database(
+            os.environ.get("AURORA_DB_PATH", ":memory:"),
+            os.environ.get("TURSO_DATABASE_URL", "").strip(),
+            os.environ.get("TURSO_AUTH_TOKEN", "").strip(),
+        )
+    )
     router = router or Router(build_catalog(settings))
     factory = factory or DefaultProviderFactory(settings, events)
     workspace_root = workspace_root or os.getcwd()

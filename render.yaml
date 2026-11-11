@@ -28,3 +28,9 @@ services:
         sync: false
       - key: XAI_API_KEY
         sync: false
+      # Turso (hosted SQLite) keeps chat memory across restarts. Set both in the
+      # Render dashboard (never committed); without them memory is in RAM only.
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
