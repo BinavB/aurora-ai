@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 import secrets
+import time
 from collections.abc import Mapping
 from typing import Literal
 from urllib.parse import urlparse
@@ -34,6 +35,10 @@ SNAPSHOT_NAMESPACE = "shared_snapshots"
 MANAGE_NAMESPACE = "shared_manage"
 SNAPSHOT_MESSAGE_LIMIT = 200
 SNAPSHOT_TEXT_LIMIT = 20000
+SNAPSHOT_TOTAL_LIMIT = 200000
+SNAPSHOT_TTL_SECONDS = 30 * 24 * 60 * 60
+SNAPSHOTS_PER_HOUR = 10
+HOUR_SECONDS = 60 * 60
 
 
 def _titles_namespace(user: AccountUser) -> str:
@@ -42,6 +47,24 @@ def _titles_namespace(user: AccountUser) -> str:
 
 def _shares_namespace(user: AccountUser) -> str:
     return f"chat_shares:{user.id}"
+
+
+def _manual_titles_namespace(user: AccountUser) -> str:
+    return f"chat_titles_manual:{user.id}"
+
+
+def _client_address(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",")[-1].strip()
+    return request.client.host if request.client else "unknown"
+
+
+async def remember_auto_title(
+    memory: MemoryStore, user: AccountUser, chat_id: str, title: str
+) -> None:
+    if await memory.kv.get(_manual_titles_namespace(user), chat_id) is None:
+        await memory.kv.set(_titles_namespace(user), chat_id, title)
 
 
 class RenameBody(BaseModel):
@@ -238,6 +261,7 @@ def install_account_routes(
         if not await memory.conversation(session_id):
             raise ValidationError("Chat not found")
         await memory.kv.set(_titles_namespace(user), chat_id, title)
+        await memory.kv.set(_manual_titles_namespace(user), chat_id, "1")
         return {"title": title}
 
     @app.delete("/chats/{chat_id}")
@@ -246,6 +270,7 @@ def install_account_routes(
         session_id = resolve_session_id(user, chat_id)
         await _revoke_share(memory, user, chat_id, session_id)
         await memory.kv.delete(_titles_namespace(user), chat_id)
+        await memory.kv.delete(_manual_titles_namespace(user), chat_id)
         await memory.clear_conversation(session_id)
         return {"ok": True}
 
@@ -268,17 +293,30 @@ def install_account_routes(
         await _revoke_share(memory, user, chat_id, resolve_session_id(user, chat_id))
         return {"ok": True}
 
+    snapshot_times: dict[str, list[float]] = {}
+
     @app.post("/shares")
-    async def create_snapshot(body: SnapshotBody) -> dict[str, str]:
+    async def create_snapshot(body: SnapshotBody, request: Request) -> dict[str, str]:
         if not body.messages or len(body.messages) > SNAPSHOT_MESSAGE_LIMIT:
             raise ValidationError("A chat must have between 1 and 200 messages to share")
-        if any(len(message.content) > SNAPSHOT_TEXT_LIMIT for message in body.messages):
-            raise ValidationError("A message is too long to share")
+        sizes = [len(message.content) for message in body.messages]
+        if max(sizes) > SNAPSHOT_TEXT_LIMIT or sum(sizes) > SNAPSHOT_TOTAL_LIMIT:
+            raise ValidationError("This chat is too long to share")
+        now = time.time()
+        address = _client_address(request)
+        recent = [at for at in snapshot_times.get(address, []) if now - at < HOUR_SECONDS]
+        if len(recent) >= SNAPSHOTS_PER_HOUR:
+            raise ValidationError(
+                "You have shared a lot in the last hour. Try again later."
+            )
+        snapshot_times[address] = [*recent, now]
         token = secrets.token_urlsafe(18)
         manage = secrets.token_urlsafe(24)
         snapshot = {
             "title": _title(body.title) or "Shared chat",
             "messages": [message.model_dump() for message in body.messages],
+            "created_at": now,
+            "manage": manage,
         }
         await memory.kv.set(SNAPSHOT_NAMESPACE, token, json.dumps(snapshot))
         await memory.kv.set(MANAGE_NAMESPACE, manage, token)
@@ -300,13 +338,23 @@ def install_account_routes(
             raise ValidationError("This shared chat is no longer available")
         snapshot = await memory.kv.get(SNAPSHOT_NAMESPACE, token)
         if snapshot is not None:
-            return {"title": "", **json.loads(snapshot)}
+            stored = json.loads(snapshot)
+            if time.time() - stored.get("created_at", 0) > SNAPSHOT_TTL_SECONDS:
+                await memory.kv.delete(SNAPSHOT_NAMESPACE, token)
+                await memory.kv.delete(MANAGE_NAMESPACE, stored.get("manage", ""))
+                raise ValidationError("This shared chat has expired")
+            return {
+                "title": stored["title"],
+                "messages": stored["messages"],
+                "verified": False,
+            }
         session_id = await memory.kv.get(SHARED_NAMESPACE, token)
         if session_id is None:
             raise ValidationError("This shared chat is no longer available")
         history = await memory.conversation(session_id)
         return {
             "title": "",
+            "verified": True,
             "messages": [
                 {"role": message.role.value, "content": message.content}
                 for message in history

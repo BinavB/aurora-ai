@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import re
+
 from aurora.app.agents.conversation import ConversationAgent
 from aurora.app.agents.llm import system as system_msg
+from aurora.app.agents.llm import user as user_msg
 from aurora.app.agents.models import ConversationTurn
 from aurora.app.core.constants import AURORA_IDENTITY_PROMPT
+from aurora.app.core.exceptions import AuroraError
 from aurora.app.core.types import Message, Role
 from aurora.app.memory.store import MemoryStore
 from aurora.app.router.intent import classify_intent
@@ -16,6 +20,24 @@ from aurora.app.services.base import RoutedService
 from aurora.app.services.collaboration_service import recommend_effort
 from aurora.app.services.factory import ProviderFactory
 from aurora.app.services.models import ChatReply
+
+TITLE_AT_USER_MESSAGES = frozenset({1, 3})
+TITLE_LIMIT = 60
+TITLE_EXCERPT = 300
+TITLE_INSTRUCTION = (
+    "Write a short title of 2 to 5 words that names the main topic of this "
+    "chat. Reply with the title only: no quotes, no full stop, no emoji, in "
+    "the same language as the user."
+)
+_TITLE_TRIM = re.compile(
+    "^[\"'\u201c\u201d\u2018\u2019`*#\\s]+|[\"'\u201c\u201d\u2018\u2019`*.:;,\\s]+$"
+)
+
+
+def clean_title(raw: str) -> str:
+    lines = raw.strip().splitlines()
+    first = lines[0] if lines else ""
+    return " ".join(_TITLE_TRIM.sub("", first).split())[:TITLE_LIMIT].strip()
 
 
 class ChatService(RoutedService):
@@ -79,6 +101,26 @@ class ChatService(RoutedService):
             sources=web.sources,
             recommended_effort=recommend_effort(message).value,
         )
+
+    async def suggest_title(self, session_id: str) -> str | None:
+        """Name the chat from its opening turns, on the first and third message."""
+        history = await self._memory.conversation(session_id)
+        asked = sum(1 for item in history if item.role is Role.USER)
+        if asked not in TITLE_AT_USER_MESSAGES:
+            return None
+        transcript = "\n".join(
+            f"{'User' if item.role is Role.USER else 'Assistant'}: "
+            f"{item.content[:TITLE_EXCERPT]}"
+            for item in history[:6]
+        )
+        try:
+            _, text = await self._complete(
+                RoutingRequest(task="Name this chat"),
+                [system_msg(TITLE_INSTRUCTION), user_msg(transcript)],
+            )
+        except AuroraError:
+            return None
+        return clean_title(text) or None
 
     async def _chat_with_images(
         self,

@@ -170,7 +170,7 @@ def test_signed_in_chats_are_saved_and_listed(tmp_path: Path) -> None:
         chats = client.get("/chats").json()["chats"]
         saved = client.get("/chats/chat-aaaa1").json()["messages"]
     assert {c["id"] for c in chats} == {"chat-aaaa1", "chat-bbbb2"}
-    assert {c["title"] for c in chats} == {"first question", "another topic"}
+    assert all(c["title"] for c in chats)
     assert [m["role"] for m in saved] == ["user", "assistant", "user", "assistant"]
     assert saved[0]["content"] == "first question"
 
@@ -370,3 +370,43 @@ def test_snapshot_rejects_empty_or_oversized_chats(tmp_path: Path) -> None:
             == 400
         )
         assert client.delete("/shares/not-valid").status_code == 400
+
+
+def _say_until_title(client: TestClient, chat_id: str, text: str) -> str:
+    with client.websocket_connect("/ws/chat", headers=_cookie_header(client)) as ws:
+        ws.send_json({"session_id": chat_id, "message": text})
+        while True:
+            event = ws.receive_json()
+            if event["type"] == "title":
+                return event["title"]
+
+
+def test_first_reply_names_the_chat_until_renamed_by_hand(tmp_path: Path) -> None:
+    with _client(tmp_path) as client:
+        _sign_in(client)
+        title = _say_until_title(client, "chat-aaaa1", "plan my trip")
+        assert client.get("/chats").json()["chats"][0]["title"] == title
+        client.patch("/chats/chat-aaaa1", json={"title": "My holiday"})
+        _say(client, "chat-aaaa1", "second")
+        _say_until_title(client, "chat-aaaa1", "third")
+        assert client.get("/chats").json()["chats"][0]["title"] == "My holiday"
+
+
+def test_snapshot_shares_are_rate_limited_per_address(tmp_path: Path) -> None:
+    body = {"messages": [{"role": "user", "content": "hi"}]}
+    with _client(tmp_path) as client:
+        statuses = [client.post("/shares", json=body).status_code for _ in range(11)]
+    assert statuses[:10] == [200] * 10
+    assert statuses[10] == 400
+
+
+def test_snapshot_is_marked_unverified_and_server_share_verified(tmp_path: Path) -> None:
+    with _client(tmp_path) as client:
+        token = client.post(
+            "/shares", json={"messages": [{"role": "user", "content": "hi"}]}
+        ).json()["token"]
+        assert client.get(f"/shared/{token}").json()["verified"] is False
+        _sign_in(client)
+        _say(client, "chat-aaaa1", "hello")
+        live = client.post("/chats/chat-aaaa1/share").json()["token"]
+        assert client.get(f"/shared/{live}").json()["verified"] is True

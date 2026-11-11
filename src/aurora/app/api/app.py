@@ -18,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 
 from aurora.app.api.account import (
     install_account_routes,
+    remember_auto_title,
     resolve_session_id,
     same_origin,
     user_from_cookies,
@@ -287,7 +288,7 @@ def create_app(
             while True:
                 data = await websocket.receive_json()
                 user = user_from_cookies(signer, websocket.cookies)
-                await _handle_ws_turn(chat, websocket, data, user)
+                await _handle_ws_turn(chat, websocket, data, user, memory)
         except WebSocketDisconnect:
             return
 
@@ -300,11 +301,13 @@ async def _handle_ws_turn(
     websocket: WebSocket,
     data: dict,
     user: AccountUser | None,
+    memory: MemoryStore,
 ) -> None:
     """Run one WebSocket chat turn, streaming tokens or a structured error."""
     try:
+        session_id = resolve_session_id(user, data["session_id"])
         reply = await chat.chat(
-            resolve_session_id(user, data["session_id"]),
+            session_id,
             data["message"],
             offline=data.get("offline", False),
             prefer_provider=data.get("prefer_provider"),
@@ -326,6 +329,12 @@ async def _handle_ws_turn(
             "recommended_effort": reply.recommended_effort,
         }
     )
+    title = await chat.suggest_title(session_id)
+    if title is None:
+        return
+    if user is not None:
+        await remember_auto_title(memory, user, data["session_id"], title)
+    await websocket.send_json({"type": "title", "title": title})
 
 
 def _mount_frontend(app: FastAPI, frontend_dir: str | None) -> None:

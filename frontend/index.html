@@ -966,6 +966,12 @@
       function persistLocal() {
         try { localStorage.setItem(CHATS_KEY, JSON.stringify(localChats)); localStorage.setItem(CURRENT_KEY, sessionId); } catch { /* storage full or blocked */ }
       }
+      function applyAutoTitle(title) {
+        if (currentUser) { loadChats(); return; }
+        const chat = localChats[sessionId];
+        if (!chat || chat.named || !title) return;
+        chat.title = turnTitle(title); persistLocal(); loadChats();
+      }
       function saveTurn(role, text) {
         if (currentUser) { if (role === "aurora") setTimeout(loadChats, 1500); persistLocal(); return; }
         const chat = localChats[sessionId] || (localChats[sessionId] = { id: sessionId, title: "", updated: 0, turns: [] });
@@ -980,7 +986,7 @@
         const proto = location.protocol === "https:" ? "wss" : "ws";
         ws = new WebSocket(`${proto}://${location.host}/ws/chat`);
         ws.onmessage = (ev) => {
-          const m = JSON.parse(ev.data); if (!pending) return;
+          const m = JSON.parse(ev.data); if (m.type === "title") { applyAutoTitle(m.title); return; } if (!pending) return;
           if (m.type === "token") { if (pending.dataset.pending) { pending.textContent = ""; delete pending.dataset.pending; } pending.classList.add("cursor"); pending.textContent += (pending.textContent ? " " : "") + m.content; scrollDown(); }
           else if (m.type === "done") { pending.classList.remove("cursor"); const raw = m.content || pending.textContent; pending.classList.add("md"); pending.innerHTML = mdToHtml(raw); const sources = sourcesBox(m.sources); if (sources) pending.parentElement.appendChild(sources); pending.parentElement.appendChild(replyMeta(raw, EFFORT_LABEL.fast)); saveTurn("aurora", raw); const hint = effortHint(m.recommended_effort, lastAsk.send, lastAsk.display); if (hint) pending.parentElement.appendChild(hint); setEngine(m.provider, m.model); pending = null; scrollDown(); }
           else if (m.type === "error") { pending.classList.remove("cursor"); pending.parentElement.classList.add("err"); pending.textContent = friendly(m.code, m.message); pending = null; scrollDown(); }
@@ -1097,7 +1103,7 @@
           if (finished) return; finished = true;
           const title = input.value.trim();
           if (!save || !title || title === chat.title) { loadChats(); return; }
-          if (chat.local) { if (localChats[chat.id]) { localChats[chat.id].title = title; persistLocal(); } loadChats(); return; }
+          if (chat.local) { if (localChats[chat.id]) { localChats[chat.id].title = title; localChats[chat.id].named = true; persistLocal(); } loadChats(); return; }
           const res = await fetch("/chats/" + encodeURIComponent(chat.id), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title }) });
           if (!res.ok) toast("Could not rename that chat.");
           loadChats();
@@ -1180,10 +1186,10 @@
       async function openShared(token) {
         try {
           const res = await fetch("/shared/" + encodeURIComponent(token)); if (!res.ok) throw new Error();
-          const { messages, title } = await res.json();
+          const { messages, title, verified } = await res.json();
           stopSpeaking(); pending = null; renderSaved(messages);
           const banner = document.createElement("div"); banner.className = "shared-banner";
-          const note = document.createElement("span"); note.textContent = title ? `Shared chat: ${title} (read only)` : "Shared chat (read only)"; banner.appendChild(note);
+          const note = document.createElement("span"); note.textContent = (title ? `Shared chat: ${title}` : "Shared chat") + (verified ? " (read only)" : " (read only copy from someone\u2019s device, not checked by AURORA)"); banner.appendChild(note);
           const start = document.createElement("a"); start.href = "/"; start.textContent = "Start your own chat";
           banner.appendChild(start); log.prepend(banner);
           input.disabled = true; $("#sendBtn").disabled = true; input.placeholder = "Read-only shared chat";
