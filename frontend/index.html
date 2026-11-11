@@ -252,14 +252,14 @@
         radial-gradient(34% 40% at 20% 28%, rgba(77,141,255,0.38), transparent 62%),
         radial-gradient(32% 38% at 80% 24%, rgba(169,123,255,0.34), transparent 62%),
         radial-gradient(40% 46% at 68% 80%, rgba(255,123,197,0.3), transparent 64%);
-        filter: blur(60px); animation: splashDrift 9s ease-in-out infinite alternate; }
-      #splash .splash-stars { position: absolute; inset: 0; pointer-events: none; background-image:
+        will-change: transform; animation: splashDrift 9s ease-in-out infinite alternate; }
+      #splash .splash-stars { position: absolute; inset: 0; pointer-events: none; will-change: opacity; background-image:
         radial-gradient(1.2px 1.2px at 12% 18%, #fff, transparent), radial-gradient(1px 1px at 78% 12%, #fff, transparent),
         radial-gradient(1.4px 1.4px at 30% 72%, #fff, transparent), radial-gradient(1px 1px at 86% 64%, #cfe0ff, transparent),
         radial-gradient(1.2px 1.2px at 52% 40%, #fff, transparent), radial-gradient(1px 1px at 6% 88%, #ffd6f0, transparent);
         animation: splashTwinkle 4s ease-in-out infinite; }
-      #splash .splash-core { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 1.5rem; animation: splashIn 0.9s cubic-bezier(.2,.8,.2,1) both; }
-      #splash .splash-logo { width: 132px; height: 132px; filter: drop-shadow(0 0 28px rgba(140,130,255,0.7)); }
+      #splash .splash-core { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 1.5rem; backface-visibility: hidden; will-change: transform, opacity; animation: splashIn 0.9s cubic-bezier(.2,.8,.2,1) both; }
+      #splash .splash-logo { width: 132px; height: 132px; will-change: transform; }
       #splash h1 { margin: 1.1rem 0 0; font-family: var(--display); font-weight: 700; font-size: clamp(1.8rem, 8vw, 2.7rem); letter-spacing: 0.2em; padding-left: 0.2em; white-space: nowrap;
         background: var(--grad); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 6s linear infinite; }
       #splash p { margin: 0.5rem 0 0; font-size: 0.7rem; letter-spacing: 0.4em; text-transform: uppercase; color: var(--muted); }
