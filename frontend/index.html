@@ -527,6 +527,9 @@
           blocks.push(`<pre class="code">${esc(code.replace(/\n$/, ""))}</pre>`);
           return `\u0000${blocks.length - 1}\u0000`;
         });
+        src = src
+          .replace(/\s*【[^】]*】/g, "")
+          .replace(/([.!?:)])[ \t]+(?=(?:[-*]|\d+\.)[ \t]+\*\*)/g, "$1\n");
         let h = esc(src).replace(/\s*\u2014\s*/g, ", ").replace(/\s\u2013\s/g, ", ");
         h = h.replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`);        // inline code
         h = h.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");           // **bold**
