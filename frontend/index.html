@@ -76,7 +76,32 @@
       }
       body::after { content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(120% 82% at 50% -12%, transparent 42%, rgba(3,4,10,0.8) 100%); }
 
-      .app { position: relative; z-index: 2; height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
+      .shell { position: relative; z-index: 2; display: flex; height: 100vh; height: 100dvh; }
+      .side { width: 260px; flex: 0 0 260px; display: flex; flex-direction: column; gap: 0.7rem; min-height: 0; padding: 0.9rem 0.8rem calc(0.9rem + env(safe-area-inset-bottom)); border-right: 1px solid var(--stroke); background: rgba(6,8,18,0.8); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+      .side-title { font-family: var(--display); font-weight: 700; letter-spacing: 0.18em; padding: 0.2rem 0.4rem; }
+      .side-btn { display: flex; align-items: center; gap: 0.6rem; width: 100%; padding: 0.6rem 0.75rem; font: inherit; font-size: 0.85rem; color: var(--ink); background: transparent; border: 1px solid var(--stroke); border-radius: 12px; cursor: pointer; text-align: left; }
+      .side-btn:hover { border-color: var(--stroke-acc); }
+      .side-new { background: rgba(143,155,255,0.12); border-color: var(--stroke-acc); color: var(--accent-lt); }
+      .side-label { margin: 0.4rem 0 0; font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted-2); }
+      .side-chats { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 0.35rem; }
+      .side-hint { margin: 0; font-size: 0.78rem; color: var(--muted-2); }
+      .side-foot { display: flex; flex-direction: column; gap: 0.55rem; border-top: 1px solid var(--stroke); padding-top: 0.75rem; }
+      .side-profile { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+      .side-who { min-width: 0; display: flex; flex-direction: column; font-size: 0.8rem; }
+      .side-who strong, .side-who span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .side-who span { color: var(--muted-2); font-size: 0.72rem; }
+      .google-cta { display: flex; align-items: center; justify-content: center; gap: 0.75rem; width: 100%; height: 44px; padding: 0 1rem; font: inherit; font-size: 0.875rem; font-weight: 600; color: #1f1f1f; background: #fff; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; cursor: pointer; }
+      .google-cta:hover { background: #f1f3f4; }
+      .google-cta svg { width: 18px; height: 18px; flex: 0 0 auto; }
+      .scrim { position: fixed; inset: 0; z-index: 30; background: rgba(3,4,10,0.55); }
+      .scrim[hidden] { display: none; }
+      button.menu-btn { display: none; }
+      .app { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; position: relative; }
+      @media (max-width: 760px) {
+        .side { position: fixed; top: 0; bottom: 0; left: 0; z-index: 40; width: min(82vw, 290px); transform: translateX(-104%); transition: transform 0.25s ease; }
+        .side.open { transform: none; }
+        button.menu-btn { display: inline-flex; }
+      }
       header { display: flex; align-items: center; gap: 1rem; padding: 0.9rem 1.4rem; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
       .brand { display: flex; align-items: center; gap: 0.7rem; }
       .brand .logo { width: 40px; height: 40px; filter: drop-shadow(0 0 16px rgba(140,130,255,0.6)); }
@@ -286,24 +311,15 @@
       .install-btn .install-label { margin-left: 0.25rem; }
       .install-btn .install-icon { width: 16px; height: 16px; flex: 0 0 auto; }
       @media (max-width: 640px) { .install-btn .install-label { display: none; } .install-btn { padding-inline: 0.7rem; } }
-      .google-btn { cursor: pointer; font: inherit; font-size: 0.8rem; font-weight: 500; color: #1f1f1f; background: #fff; border-color: #dadce0; }
-      .google-btn:hover { background: #f1f3f4; }
-      .google-btn svg { width: 16px; height: 16px; flex: 0 0 auto; }
-      .avatar-btn, .avatar { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; border-radius: 50%; overflow: hidden; border: 1px solid var(--stroke-acc); background: var(--glass-2); color: var(--ink); font: inherit; font-weight: 600; padding: 0; }
-      .avatar-btn { width: 34px; height: 34px; cursor: pointer; }
+      .avatar { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; border-radius: 50%; overflow: hidden; border: 1px solid var(--stroke-acc); background: var(--glass-2); color: var(--ink); font: inherit; font-weight: 600; padding: 0; }
       .avatar { width: 44px; height: 44px; }
-      .avatar-btn img, .avatar img { width: 100%; height: 100%; object-fit: cover; }
-      .account-head { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.9rem; }
-      .account-head strong { display: block; font-size: 0.95rem; }
-      .chat-list { max-height: 44vh; overflow-y: auto; display: flex; flex-direction: column; gap: 0.4rem; margin: 0.7rem 0; }
+      .avatar img { width: 100%; height: 100%; object-fit: cover; }
       .chat-item { display: flex; gap: 0.4rem; align-items: center; }
       .chat-open { flex: 1; min-width: 0; text-align: left; cursor: pointer; font: inherit; font-size: 0.86rem; color: var(--ink); background: rgba(0,0,0,0.28); border: 1px solid var(--stroke); border-radius: 12px; padding: 0.55rem 0.7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .chat-open:hover, .chat-open.current { border-color: var(--stroke-acc); }
       .chat-open.current { color: var(--accent-lt); }
       .chat-del { width: 34px; height: 34px; font-size: 0.85rem; }
-      .pill.action { cursor: pointer; font: inherit; font-size: 0.8rem; }
       .toast { position: fixed; left: 50%; bottom: calc(1.2rem + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 60; max-width: 90vw; padding: 0.6rem 1rem; border-radius: 12px; border: 1px solid var(--stroke-acc); background: var(--glass-2); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); color: var(--ink); font-size: 0.85rem; }
-      @media (max-width: 640px) { .google-btn .google-label { display: none; } .google-btn { padding-inline: 0.6rem; } }
       .install-hint { position: fixed; left: 50%; bottom: 1.2rem; transform: translateX(-50%); z-index: 90; max-width: min(92vw, 420px); padding: 0.7rem 1rem; border-radius: 14px; border: 1px solid var(--stroke-acc); background: rgba(12,14,30,0.92); color: var(--ink); font-size: 0.86rem; text-align: center; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
       @media (prefers-reduced-motion: reduce) {
         #splash *, #splash { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
@@ -336,8 +352,27 @@
     <div class="aurora" id="aurora"></div>
     <div class="aurora2" id="aurora2"></div>
 
+    <div class="shell">
+    <aside class="side" id="side" aria-label="Sidebar">
+      <div class="side-title">AURORA</div>
+      <button type="button" class="side-btn side-new" id="newChatBtn"><span aria-hidden="true">＋</span> New chat</button>
+      <p class="side-label">Chats</p>
+      <div class="side-chats" id="chatList"></div>
+      <p class="side-hint" id="chatsEmpty" hidden></p>
+      <div class="side-foot">
+        <button type="button" class="side-btn" id="settingsBtn"><span aria-hidden="true">⚙️</span> Settings</button>
+        <div class="side-profile" id="profileIn" hidden>
+          <span class="avatar" id="accountAvatar"></span>
+          <div class="side-who"><strong id="accountName"></strong><span id="accountEmail"></span></div>
+        </div>
+        <button type="button" class="side-btn" id="signOutBtn" hidden>Sign out</button>
+        <button type="button" class="google-cta" id="signInBtn" hidden aria-label="Continue with Google"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>Continue with Google</button>
+      </div>
+    </aside>
+    <div class="scrim" id="scrim" hidden></div>
     <div class="app">
       <header>
+        <button type="button" class="iconbtn menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
         <div class="brand">
           <svg class="logo" viewBox="0 0 64 64" fill="none" aria-hidden="true">
             <defs>
@@ -355,10 +390,7 @@
         </div>
         <span class="spacer"></span>
         <button class="pill install-btn" id="installBtn" type="button" hidden aria-label="Install app"><svg class="install-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m6 10 6 6 6-6"/><path d="M4 21h16"/></svg><span class="install-label">Install app</span></button>
-        <button class="pill google-btn" id="signInBtn" type="button" hidden aria-label="Sign in with Google"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg><span class="google-label">Sign in</span></button>
-        <button class="pill" id="headerNewBtn" type="button" title="Start a new chat">＋ New</button>
         <span class="pill" id="engine" title="Active engine (auto-selected)">✨ auto</span>
-        <button class="avatar-btn" id="accountBtn" type="button" hidden aria-label="Account and saved chats"></button>
       </header>
 
       <main>
@@ -411,27 +443,11 @@
         </div>
       </div>
     </div>
-
-    <div class="overlay" id="accountPanel" hidden>
-      <div class="keys-card">
-        <div class="account-head">
-          <span class="avatar" id="accountAvatar"></span>
-          <div><strong id="accountName"></strong><span class="tag" id="accountEmail"></span></div>
-        </div>
-        <h3>Saved chats</h3>
-        <p class="tag" id="chatsEmpty" hidden>No saved chats yet. Start talking and they will appear here.</p>
-        <div class="chat-list" id="chatList"></div>
-        <div class="keys-actions">
-          <button type="button" class="pill action" id="newChatBtn">＋ New chat</button>
-          <button type="button" class="pill action" id="signOutBtn">Sign out</button>
-          <button type="button" class="iconbtn" id="accountClose" title="Close">✕</button>
-        </div>
-      </div>
     </div>
 
     <div class="overlay" id="keysPanel" hidden>
       <div class="keys-card">
-        <h3>Connect models</h3>
+        <h3>Settings</h3>
         <p class="tag">Search a provider, paste its API key — applied instantly (kept in memory on the server).</p>
         <input id="keysSearch" placeholder="🔎 Search providers (gemini, groq, openai…)" autocomplete="off" />
         <div id="keysList" class="keys-list"></div>
@@ -858,6 +874,7 @@
         if (savedChat.id !== sessionId) resetSaved(sessionId, []);
         savedChat.turns = [...savedChat.turns, { role, text }].slice(-200);
         rememberLocally();
+        if (role === "aurora" && currentUser) setTimeout(loadChats, 1500);
       }
       let ws = null, pending = null;
       function connect() {
@@ -884,8 +901,9 @@
 
       /* ===== google account + saved chats ===== */
       const heroHtml = $("#hero") ? $("#hero").outerHTML : "";
-      const accountPanel = $("#accountPanel");
-      let googleReady = false;
+      const side = $("#side"), scrim = $("#scrim");
+      let googleReady = false, currentUser = null;
+      function setSide(open) { side.classList.toggle("open", open); scrim.hidden = !open; }
       function toast(text) {
         const t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); t.textContent = text;
         document.body.appendChild(t); setTimeout(() => t.remove(), 4000);
@@ -896,11 +914,12 @@
         const img = document.createElement("img"); img.src = user.picture; img.alt = ""; img.referrerPolicy = "no-referrer"; el.appendChild(img);
       }
       function showAccount(user) {
+        currentUser = user;
         $("#signInBtn").hidden = !!user || !googleReady;
-        $("#accountBtn").hidden = !user;
-        if (!user) return;
-        paintAvatar($("#accountBtn"), user); paintAvatar($("#accountAvatar"), user);
-        $("#accountName").textContent = user.name; $("#accountEmail").textContent = user.email;
+        $("#profileIn").hidden = !user;
+        $("#signOutBtn").hidden = !user;
+        if (user) { paintAvatar($("#accountAvatar"), user); $("#accountName").textContent = user.name; $("#accountEmail").textContent = user.email; }
+        loadChats();
       }
       async function loadAccount() {
         try {
@@ -914,7 +933,7 @@
       }
       function startNewChat() {
         stopSpeaking(); sessionId = newChatId(); resetSaved(sessionId, []); pending = null; lastAsk = { send: "", display: "" };
-        log.innerHTML = heroHtml;
+        log.innerHTML = heroHtml; setSide(false); loadChats();
       }
       function renderSaved(messages) {
         log.innerHTML = "";
@@ -929,7 +948,7 @@
         try {
           const res = await fetch("/chats/" + encodeURIComponent(id)); if (!res.ok) throw new Error();
           const { messages } = await res.json();
-          sessionId = id; pending = null; resetSaved(id, messages.filter((m) => m.role === "user" || m.role === "assistant").map((m) => ({ role: m.role === "user" ? "user" : "aurora", text: m.content }))); renderSaved(messages); accountPanel.hidden = true;
+          sessionId = id; pending = null; resetSaved(id, messages.filter((m) => m.role === "user" || m.role === "assistant").map((m) => ({ role: m.role === "user" ? "user" : "aurora", text: m.content }))); renderSaved(messages); setSide(false); loadChats();
         } catch (e) { toast("Could not open that chat."); }
       }
       function chatRow(chat) {
@@ -945,23 +964,25 @@
         row.append(open, del); return row;
       }
       async function loadChats() {
-        const list = $("#chatList"); list.textContent = "";
+        const list = $("#chatList"), hint = $("#chatsEmpty");
+        list.textContent = "";
+        if (!currentUser) { hint.textContent = "Sign in to save your chats to your account."; hint.hidden = false; return; }
         try {
           const res = await fetch("/chats"); if (!res.ok) throw new Error();
           const { chats } = await res.json();
           chats.forEach((chat) => list.appendChild(chatRow(chat)));
-          $("#chatsEmpty").hidden = chats.length > 0;
-        } catch (e) { $("#chatsEmpty").hidden = false; }
+          hint.textContent = "No saved chats yet. Start talking and they will appear here.";
+          hint.hidden = chats.length > 0;
+        } catch (e) { hint.textContent = "Could not load your chats."; hint.hidden = false; }
       }
       $("#signInBtn").addEventListener("click", () => { location.href = "/auth/google/login"; });
-      $("#accountBtn").addEventListener("click", () => { accountPanel.hidden = false; loadChats(); });
-      $("#accountClose").addEventListener("click", () => { accountPanel.hidden = true; });
-      accountPanel.addEventListener("click", (e) => { if (e.target === accountPanel) accountPanel.hidden = true; });
-      $("#newChatBtn").addEventListener("click", () => { startNewChat(); accountPanel.hidden = true; });
-      $("#headerNewBtn").addEventListener("click", startNewChat);
+      $("#menuBtn").addEventListener("click", () => setSide(!side.classList.contains("open")));
+      scrim.addEventListener("click", () => setSide(false));
+      $("#newChatBtn").addEventListener("click", startNewChat);
+      $("#settingsBtn").addEventListener("click", () => { keysPanel.hidden = false; setSide(false); });
       $("#signOutBtn").addEventListener("click", async () => {
         await fetch("/auth/logout", { method: "POST" });
-        accountPanel.hidden = true; showAccount(null); startNewChat();
+        showAccount(null); startNewChat();
         ws.onclose = null; ws.close(); connect();
       });
       loadAccount();
