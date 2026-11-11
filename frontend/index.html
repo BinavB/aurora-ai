@@ -520,6 +520,17 @@
       function downloadBtn(name, text) { const b = document.createElement("button"); b.type = "button"; b.className = "dl"; b.textContent = "⬇️ download"; b.onclick = () => downloadFile(name, text); return b; }
       const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
       /* tiny, safe markdown -> HTML so replies render pretty (no ** left over) */
+      const BINAV_SEARCH_URL = "https://www.google.com/search?q=binav.b";
+      function linkBinavHandle(text) {
+        const mdLink = /\[[^\]]*\]\([^)]*\)/g;
+        const links = text.match(mdLink) || [];
+        const parts = text.split(mdLink).map((part) => part.replace(/\bbinav\.b\b/gi, (h) => `[${h}](${BINAV_SEARCH_URL})`));
+        return parts.reduce((joined, part, i) => {
+          const link = links[i] || "";
+          const label = link.slice(1, link.indexOf("]"));
+          return joined + part + (label.toLowerCase() === "binav.b" ? `[${label}](${BINAV_SEARCH_URL})` : link);
+        }, "");
+      }
       function mdToHtml(src) {
         const blocks = [];
         // fenced code blocks (protect contents from other rules)
@@ -527,7 +538,7 @@
           blocks.push(`<pre class="code">${esc(code.replace(/\n$/, ""))}</pre>`);
           return `\u0000${blocks.length - 1}\u0000`;
         });
-        src = src
+        src = linkBinavHandle(src)
           .replace(/\s*【[^】]*】/g, "")
           .replace(/([.!?:)])[ \t]+(?=(?:[-*]|\d+\.)[ \t]+\*\*)/g, "$1\n");
         let h = esc(src).replace(/\s*\u2014\s*/g, ", ").replace(/\s\u2013\s/g, ", ");
