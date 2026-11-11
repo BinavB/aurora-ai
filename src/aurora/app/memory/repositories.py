@@ -135,6 +135,11 @@ class SqliteKeyValueRepository(KeyValueRepository):
         )
         return {row["key"]: row["value"] for row in rows}
 
+    async def delete_by_value(self, namespace: str, value: str) -> None:
+        await self._db.execute(
+            "DELETE FROM kv WHERE namespace = ? AND value = ?", (namespace, value)
+        )
+
     async def delete(self, namespace: str, key: str) -> None:
         await self._db.execute(
             "DELETE FROM kv WHERE namespace = ? AND key = ?", (namespace, key)

@@ -319,3 +319,15 @@ def test_share_and_rename_require_sign_in(tmp_path: Path) -> None:
     with _client(tmp_path) as client:
         assert client.patch("/chats/chat-aaaa1", json={"title": "x"}).status_code == 401
         assert client.post("/chats/chat-aaaa1/share").status_code == 401
+
+
+async def test_revoking_removes_orphaned_share_tokens_too() -> None:
+    memory = MemoryStore(Database())
+    await memory.open()
+    await memory.kv.set("shared_tokens", "token-from-a-race-1234", "u:1:chat-aaaa1")
+    await memory.kv.set("shared_tokens", "token-that-won-5678", "u:1:chat-aaaa1")
+    await memory.kv.set("shared_tokens", "other-chat-token-9999", "u:1:chat-bbbb2")
+    await memory.kv.delete_by_value("shared_tokens", "u:1:chat-aaaa1")
+    remaining = await memory.kv.items("shared_tokens")
+    await memory.close()
+    assert remaining == {"other-chat-token-9999": "u:1:chat-bbbb2"}

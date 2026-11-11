@@ -228,10 +228,7 @@ def install_account_routes(
     async def delete_chat(chat_id: str, request: Request) -> dict[str, bool]:
         user = require_user(request)
         session_id = resolve_session_id(user, chat_id)
-        token = await memory.kv.get(_shares_namespace(user), chat_id)
-        if token:
-            await memory.kv.delete(SHARED_NAMESPACE, token)
-            await memory.kv.delete(_shares_namespace(user), chat_id)
+        await _revoke_share(memory, user, chat_id, session_id)
         await memory.kv.delete(_titles_namespace(user), chat_id)
         await memory.clear_conversation(session_id)
         return {"ok": True}
@@ -245,18 +242,14 @@ def install_account_routes(
         token = await memory.kv.get(_shares_namespace(user), chat_id)
         if not token:
             token = secrets.token_urlsafe(18)
-            await memory.kv.set(_shares_namespace(user), chat_id, token)
             await memory.kv.set(SHARED_NAMESPACE, token, session_id)
+            await memory.kv.set(_shares_namespace(user), chat_id, token)
         return {"token": token}
 
     @app.delete("/chats/{chat_id}/share")
     async def unshare_chat(chat_id: str, request: Request) -> dict[str, bool]:
         user = require_user(request)
-        resolve_session_id(user, chat_id)
-        token = await memory.kv.get(_shares_namespace(user), chat_id)
-        if token:
-            await memory.kv.delete(SHARED_NAMESPACE, token)
-            await memory.kv.delete(_shares_namespace(user), chat_id)
+        await _revoke_share(memory, user, chat_id, resolve_session_id(user, chat_id))
         return {"ok": True}
 
     @app.get("/shared/{token}")
@@ -274,6 +267,13 @@ def install_account_routes(
                 if message.role.value in {"user", "assistant"}
             ]
         }
+
+
+async def _revoke_share(
+    memory: MemoryStore, user: AccountUser, chat_id: str, session_id: str
+) -> None:
+    await memory.kv.delete_by_value(SHARED_NAMESPACE, session_id)
+    await memory.kv.delete(_shares_namespace(user), chat_id)
 
 
 def _failed() -> Response:

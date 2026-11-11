@@ -63,5 +63,9 @@ class KeyValueRepository(ABC):
         """Return all key/value pairs in a namespace."""
 
     @abstractmethod
+    async def delete_by_value(self, namespace: str, value: str) -> None:
+        """Remove every key in a namespace whose value equals ``value``."""
+
+    @abstractmethod
     async def delete(self, namespace: str, key: str) -> None:
         """Remove a key if present."""
