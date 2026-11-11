@@ -49,16 +49,16 @@ def test_local_always_available_cloud_requires_key() -> None:
 # --- chains ---------------------------------------------------------------
 
 
-def test_chat_primary_is_gemini_flash() -> None:
+def test_chat_primary_is_groq_reasoning() -> None:
     d = _router(gemini="g", groq="gk").route(
         RoutingRequest(task="hi", kind=TaskKind.CHAT)
     )
+    assert (d.provider, d.model) == ("groq", "openai/gpt-oss-120b")
+
+
+def test_chat_falls_back_to_gemini_without_groq() -> None:
+    d = _router(gemini="g").route(RoutingRequest(task="hi", kind=TaskKind.CHAT))
     assert (d.provider, d.model) == ("gemini", "gemini-flash-latest")
-
-
-def test_chat_falls_back_to_groq_without_gemini() -> None:
-    d = _router(groq="gk").route(RoutingRequest(task="hi", kind=TaskKind.CHAT))
-    assert (d.provider, d.model) == ("groq", "llama-3.3-70b-versatile")
 
 
 def test_plan_primary_is_groq_reasoning_then_gemini() -> None:
@@ -82,8 +82,12 @@ def test_implement_primary_is_codestral_then_groq() -> None:
 
 
 def test_summarize_and_explain_chains() -> None:
-    s = _router(gemini="g").route(RoutingRequest(task="x", kind=TaskKind.SUMMARIZE))
-    assert s.model == "gemini-flash-latest"  # summarize leads with gemini flash
+    s = _router(gemini="g", groq="gk").route(
+        RoutingRequest(task="x", kind=TaskKind.SUMMARIZE)
+    )
+    assert s.model == "openai/gpt-oss-120b"  # summarize leads with groq reasoning
+    s2 = _router(gemini="g").route(RoutingRequest(task="x", kind=TaskKind.SUMMARIZE))
+    assert s2.model == "gemini-flash-latest"
     # explain leads with groq reasoning; without groq it falls to gemini flash
     e = _router(groq="gk").route(RoutingRequest(task="x", kind=TaskKind.EXPLAIN))
     assert e.model == "openai/gpt-oss-120b"
@@ -108,8 +112,9 @@ def test_rank_is_ordered_for_failover() -> None:
         RoutingRequest(task="x", kind=TaskKind.CHAT)
     )
     pairs = [(d.provider, d.model) for d in ranked]
-    # gemini flash first, groq llama second (chain order), locals later
-    assert pairs[0] == ("gemini", "gemini-flash-latest")
+    # groq reasoning first, gemini flash second (chain order), locals later
+    assert pairs[0] == ("groq", "openai/gpt-oss-120b")
+    assert pairs[1] == ("gemini", "gemini-flash-latest")
     assert ("groq", "llama-3.3-70b-versatile") in pairs
     assert ("ollama", "llama3.2") in pairs
 

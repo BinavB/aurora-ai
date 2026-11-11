@@ -15,6 +15,7 @@ from aurora.app.router.models import TaskKind
 # (local ollama is always available); unavailable links are skipped.
 CHAINS: Final[dict[TaskKind, tuple[tuple[str, str], ...]]] = {
     TaskKind.CHAT: (
+        ("groq", "openai/gpt-oss-120b"),
         ("gemini", "gemini-flash-latest"),
         ("groq", "llama-3.3-70b-versatile"),
         ("openrouter", "meta-llama/llama-3.3-70b-instruct:free"),
@@ -39,6 +40,7 @@ CHAINS: Final[dict[TaskKind, tuple[tuple[str, str], ...]]] = {
         ("ollama", "devstral"),
     ),
     TaskKind.SUMMARIZE: (
+        ("groq", "openai/gpt-oss-120b"),
         ("gemini", "gemini-flash-latest"),
         ("groq", "llama-3.3-70b-versatile"),
         ("openrouter", "meta-llama/llama-3.3-70b-instruct:free"),

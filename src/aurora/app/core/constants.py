@@ -12,7 +12,7 @@ APP_NAME: Final[str] = "aurora"
 APP_VERSION: Final[str] = "1.0.0"
 
 #: Default request timeout, in seconds, for provider HTTP calls.
-DEFAULT_TIMEOUT_SECONDS: Final[float] = 60.0
+DEFAULT_TIMEOUT_SECONDS: Final[float] = 20.0
 
 #: Default sampling temperature applied when a request omits one.
 DEFAULT_TEMPERATURE: Final[float] = 0.7
