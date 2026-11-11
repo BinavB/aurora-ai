@@ -22,6 +22,7 @@ class ChatReply(BaseModel):
     content: str
     total_tokens: int
     sources: list[SearchResult] = Field(default_factory=list)
+    recommended_effort: str | None = None
 
 
 class PlanResult(BaseModel):

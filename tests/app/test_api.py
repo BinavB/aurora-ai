@@ -223,6 +223,35 @@ def test_frontend_served_when_configured(tmp_path: Path) -> None:
     assert "text/html" in res.headers["content-type"]
 
 
+def test_install_assets_are_served(tmp_path: Path) -> None:
+    frontend = tmp_path / "ui"
+    (frontend / "icons" / "splash").mkdir(parents=True)
+    (frontend / "index.html").write_text("<h1>AURORA UI</h1>", encoding="utf-8")
+    (frontend / "manifest.webmanifest").write_text(
+        '{"name": "AURORA AI"}', encoding="utf-8"
+    )
+    (frontend / "sw.js").write_text("self.skipWaiting();", encoding="utf-8")
+    (frontend / "icons" / "icon-192.png").write_bytes(b"png")
+    settings = _settings()
+    app = create_app(
+        settings=settings,
+        memory=MemoryStore(Database()),
+        router=Router(build_catalog(settings)),
+        factory=FakeFactory(_echo()),
+        workspace_root=str(tmp_path),
+        frontend_dir=str(frontend),
+    )
+    with TestClient(app) as client:
+        manifest = client.get("/manifest.webmanifest")
+        worker = client.get("/sw.js")
+        icon = client.get("/icons/icon-192.png")
+    assert manifest.status_code == 200
+    assert "application/manifest+json" in manifest.headers["content-type"]
+    assert "AURORA AI" in manifest.text
+    assert worker.status_code == 200
+    assert icon.status_code == 200
+
+
 def test_no_frontend_route_when_not_configured(tmp_path: Path) -> None:
     with _client(_echo(), tmp_path) as client:
         assert client.get("/").status_code == 404

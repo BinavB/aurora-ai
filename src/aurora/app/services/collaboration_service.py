@@ -57,12 +57,39 @@ _PLAN: dict[Effort, tuple[int, bool, int, int]] = {
 }
 
 
+_STYLE_PREFIX = re.compile(r"^\[Style:[^\]]*\]\s*")
+_DEEP_TOPIC = re.compile(
+    r"\b(architecture|design (a|an|the)|trade-?offs?|in[- ]depth|detailed|deep dive|"
+    r"roadmap|strategy|refactor|research|migration)\b",
+    re.IGNORECASE,
+)
+_MEDIUM_TOPIC = re.compile(
+    r"\b(explain|compare|difference|pros and cons|why|how (do|does|to|can|would)|"
+    r"summari[sz]e|review|plan|write|essay|steps)\b",
+    re.IGNORECASE,
+)
+_SMALL_WORD_LIMIT = 12
+_LARGE_WORD_LIMIT = 80
+
+
+def recommend_effort(message: str) -> Effort:
+    text = _STYLE_PREFIX.sub("", message).strip()
+    words = len(text.split())
+    if "```" in text or words > _LARGE_WORD_LIMIT or _DEEP_TOPIC.search(text):
+        return Effort.MAX
+    if words <= _SMALL_WORD_LIMIT and not _MEDIUM_TOPIC.search(text):
+        return Effort.FAST
+    return Effort.BALANCED
+
+
 class CollabResult(BaseModel):
     """The synthesized output plus the roster of engines that collaborated."""
 
     content: str
     roster: list[str]
     sources: list[SearchResult] = Field(default_factory=list)
+    effort_used: str = Effort.BALANCED.value
+    recommended_effort: str | None = None
 
 
 class CollaborationService(RoutedService):
@@ -86,7 +113,11 @@ class CollaborationService(RoutedService):
     ) -> CollabResult:
         """Dispatch specialists per ``effort``, run in parallel, synthesize."""
         context = context or []
+        recommended = recommend_effort(task) if kind is TaskKind.CHAT else None
+        if recommended is Effort.FAST:
+            effort = Effort.FAST
         count, use_synth, draft_cap, synth_cap = _PLAN[effort]
+        suggestion = recommended.value if recommended else None
         web = await gather_web_context(self._search, task)
 
         # Fast: a single, fastest agent — no dispatcher, no synthesis.
@@ -94,7 +125,13 @@ class CollaborationService(RoutedService):
             decision, text = await self._complete(
                 RoutingRequest(task=task, kind=TaskKind.CHAT),
                 [
-                    system(prompt_with_web("Answer well and concisely.", web)),
+                    system(
+                        prompt_with_web(
+                            "Answer briefly and clearly. Use one or two sentences "
+                            "when the question is simple.",
+                            web,
+                        )
+                    ),
                     *context,
                     user(task),
                 ],
@@ -104,6 +141,8 @@ class CollaborationService(RoutedService):
                 content=text,
                 roster=[f"Solo · {decision.provider}/{decision.model}"],
                 sources=web.sources,
+                effort_used=effort.value,
+                recommended_effort=suggestion,
             )
 
         # A fast, logical dispatcher assigns the specialist focuses.
@@ -131,7 +170,13 @@ class CollaborationService(RoutedService):
         roster += [f"{focus} · {engine}" for focus, engine, _ in good]
 
         if not use_synth:
-            return CollabResult(content=good[0][2], roster=roster, sources=web.sources)
+            return CollabResult(
+                content=good[0][2],
+                roster=roster,
+                sources=web.sources,
+                effort_used=effort.value,
+                recommended_effort=suggestion,
+            )
 
         block = "\n\n".join(f"[{focus}]\n{text}" for focus, _, text in good)
         merge = (
@@ -141,13 +186,24 @@ class CollaborationService(RoutedService):
         decision, final = await self._complete(
             RoutingRequest(task=task, kind=synth_kind),
             [
-                system("Merge the specialist drafts into one cohesive result."),
+                system(
+                    "Merge the specialist drafts into one cohesive result. Write in "
+                    "plain, friendly language and make the answer as long as the "
+                    "question needs and no longer. Avoid tables unless the user asks "
+                    "for one."
+                ),
                 user(merge),
             ],
             max_tokens=synth_cap,
         )
         roster.append(f"Synthesizer · {decision.provider}/{decision.model}")
-        return CollabResult(content=final, roster=roster, sources=web.sources)
+        return CollabResult(
+            content=final,
+            roster=roster,
+            sources=web.sources,
+            effort_used=effort.value,
+            recommended_effort=suggestion,
+        )
 
     async def _assign(
         self, kind: TaskKind, task: str, count: int

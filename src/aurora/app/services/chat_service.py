@@ -13,6 +13,7 @@ from aurora.app.router.models import Capability, RoutingRequest
 from aurora.app.router.router import Router
 from aurora.app.search import WebSearch, gather_web_context, prompt_with_web
 from aurora.app.services.base import RoutedService
+from aurora.app.services.collaboration_service import recommend_effort
 from aurora.app.services.factory import ProviderFactory
 from aurora.app.services.models import ChatReply
 
@@ -76,6 +77,7 @@ class ChatService(RoutedService):
             content=response.content,
             total_tokens=response.usage.total_tokens,
             sources=web.sources,
+            recommended_effort=recommend_effort(message).value,
         )
 
     async def _chat_with_images(

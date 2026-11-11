@@ -69,3 +69,30 @@ async def test_max_effort_uses_more_specialists() -> None:
     # dispatcher + 3 specialists + synthesizer
     assert len(result.roster) == 5
     assert result.roster[0].startswith("Dispatcher")
+
+
+async def test_small_question_in_max_gets_a_brief_solo_answer() -> None:
+    result = await _service().collaborate(TaskKind.CHAT, "hi there", effort=Effort.MAX)
+    assert len(result.roster) == 1
+    assert result.effort_used == "fast"
+    assert result.recommended_effort == "fast"
+
+
+async def test_big_question_in_balanced_recommends_max() -> None:
+    result = await _service().collaborate(
+        TaskKind.CHAT,
+        "design the architecture for a chat app and compare the trade-offs",
+        effort=Effort.BALANCED,
+    )
+    assert result.effort_used == "balanced"
+    assert result.recommended_effort == "max"
+
+
+def test_recommend_effort_levels() -> None:
+    from aurora.app.services.collaboration_service import recommend_effort
+
+    assert recommend_effort("who built you") is Effort.FAST
+    assert recommend_effort("[Style: calm]\n\nhello") is Effort.FAST
+    assert recommend_effort("explain how a hash map works") is Effort.BALANCED
+    assert recommend_effort("give me a detailed roadmap") is Effort.MAX
+    assert recommend_effort("```py\nx = 1\n```") is Effort.MAX

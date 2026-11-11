@@ -3,7 +3,28 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AURORA · AI Engineering Platform</title>
+    <title>AURORA AI</title>
+    <meta name="theme-color" content="#05060c" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="AURORA" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="apple-touch-startup-image" href="/icons/splash/apple-splash-1320x2868.png" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icons/splash/apple-splash-1206x2622.png" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icons/splash/apple-splash-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icons/splash/apple-splash-1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icons/splash/apple-splash-1284x2778.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icons/splash/apple-splash-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icons/splash/apple-splash-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icons/splash/apple-splash-1242x2688.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icons/splash/apple-splash-828x1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icons/splash/apple-splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icons/splash/apple-splash-2048x2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icons/splash/apple-splash-1668x2388.png" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icons/splash/apple-splash-1640x2360.png" media="(device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icons/splash/apple-splash-1536x2048.png" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
     <link
       rel="icon"
       type="image/svg+xml"
@@ -93,6 +114,9 @@
       .source:hover { border-color: var(--stroke-acc); }
       .source-host { color: var(--muted-2); font-size: 0.74rem; white-space: nowrap; }
       .source-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .effort-hint { margin: 0.5rem 0 0; padding: 0.4rem 0.8rem; align-self: flex-start; border: 1px solid var(--stroke-acc); border-radius: 999px; background: rgba(143,155,255,0.12); color: var(--accent-lt); font: inherit; font-size: 0.8rem; cursor: pointer; }
+      .effort-hint:hover:not(:disabled) { background: rgba(143,155,255,0.22); }
+      .effort-hint:disabled { opacity: 0.5; cursor: default; }
       .msg.user { align-self: flex-end; } .msg.user .who { text-align: right; }
       .msg.user .bubble { background: linear-gradient(135deg, rgba(77,141,255,0.22), rgba(169,123,255,0.16), rgba(255,123,197,0.14)); border-color: var(--stroke-acc); }
       .msg.err .bubble { border-color: rgba(255,107,139,0.45); color: var(--err); }
@@ -222,9 +246,61 @@
       .attachbar .chip button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.85rem; padding: 0; }
       .attachbar .chip button:hover { color: var(--err); }
       main::-webkit-scrollbar { width: 10px; } main::-webkit-scrollbar-thumb { background: rgba(140,130,255,0.3); border-radius: 10px; }
+      #splash { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; overflow: hidden; background: radial-gradient(120% 90% at 50% 38%, #17123a 0%, #0a0b1d 48%, #05060c 100%); transition: opacity 0.7s ease, visibility 0.7s; }
+      #splash.done { opacity: 0; visibility: hidden; }
+      #splash .splash-nebula { position: absolute; inset: -20%; pointer-events: none; background:
+        radial-gradient(34% 40% at 20% 28%, rgba(77,141,255,0.38), transparent 62%),
+        radial-gradient(32% 38% at 80% 24%, rgba(169,123,255,0.34), transparent 62%),
+        radial-gradient(40% 46% at 68% 80%, rgba(255,123,197,0.3), transparent 64%);
+        filter: blur(60px); animation: splashDrift 9s ease-in-out infinite alternate; }
+      #splash .splash-stars { position: absolute; inset: 0; pointer-events: none; background-image:
+        radial-gradient(1.2px 1.2px at 12% 18%, #fff, transparent), radial-gradient(1px 1px at 78% 12%, #fff, transparent),
+        radial-gradient(1.4px 1.4px at 30% 72%, #fff, transparent), radial-gradient(1px 1px at 86% 64%, #cfe0ff, transparent),
+        radial-gradient(1.2px 1.2px at 52% 40%, #fff, transparent), radial-gradient(1px 1px at 6% 88%, #ffd6f0, transparent);
+        animation: splashTwinkle 4s ease-in-out infinite; }
+      #splash .splash-core { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 1.5rem; animation: splashIn 0.9s cubic-bezier(.2,.8,.2,1) both; }
+      #splash .splash-logo { width: 132px; height: 132px; filter: drop-shadow(0 0 28px rgba(140,130,255,0.7)); }
+      #splash h1 { margin: 1.1rem 0 0; font-family: var(--display); font-weight: 700; font-size: clamp(1.8rem, 8vw, 2.7rem); letter-spacing: 0.2em; padding-left: 0.2em; white-space: nowrap;
+        background: var(--grad); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 6s linear infinite; }
+      #splash p { margin: 0.5rem 0 0; font-size: 0.7rem; letter-spacing: 0.4em; text-transform: uppercase; color: var(--muted); }
+      #splash .splash-bar { width: min(220px, 60vw); height: 3px; margin-top: 2rem; border-radius: 3px; background: rgba(255,255,255,0.08); overflow: hidden; }
+      #splash .splash-bar span { display: block; height: 100%; width: 100%; background: var(--grad); transform-origin: left; animation: splashLoad 1.6s cubic-bezier(.4,0,.2,1) forwards; }
+      @keyframes splashIn { from { opacity: 0; transform: scale(0.82) translateY(10px); } to { opacity: 1; transform: none; } }
+      @keyframes splashLoad { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+      @keyframes splashDrift { from { transform: translate3d(-3%,-2%,0) scale(1); } to { transform: translate3d(4%,3%,0) scale(1.12); } }
+      @keyframes splashTwinkle { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
+      .install-btn { cursor: pointer; font: inherit; color: var(--accent-lt); border-color: var(--stroke-acc); background: rgba(143,155,255,0.12); }
+      .install-btn:hover { background: rgba(143,155,255,0.22); }
+      .install-btn .install-label { margin-left: 0.25rem; }
+      @media (max-width: 640px) { .install-btn .install-label { display: none; } .install-btn { padding-inline: 0.7rem; } }
+      .install-hint { position: fixed; left: 50%; bottom: 1.2rem; transform: translateX(-50%); z-index: 90; max-width: min(92vw, 420px); padding: 0.7rem 1rem; border-radius: 14px; border: 1px solid var(--stroke-acc); background: rgba(12,14,30,0.92); color: var(--ink); font-size: 0.86rem; text-align: center; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+      @media (prefers-reduced-motion: reduce) {
+        #splash *, #splash { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+      }
     </style>
   </head>
   <body>
+    <div id="splash" aria-hidden="true">
+      <div class="splash-nebula"></div>
+      <div class="splash-stars"></div>
+      <div class="splash-core">
+        <svg class="splash-logo" viewBox="0 0 64 64" fill="none">
+          <defs>
+            <radialGradient id="sp-core" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffffff" /><stop offset="40%" stop-color="#a97bff" /><stop offset="100%" stop-color="#4d8dff" /></radialGradient>
+            <linearGradient id="sp-ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4d8dff" /><stop offset="50%" stop-color="#a97bff" /><stop offset="100%" stop-color="#ff7bc5" /></linearGradient>
+          </defs>
+          <g stroke="url(#sp-ring)" stroke-width="1.6" opacity="0.95">
+            <ellipse cx="32" cy="32" rx="26" ry="10"><animateTransform attributeName="transform" type="rotate" from="0 32 32" to="360 32 32" dur="8s" repeatCount="indefinite" /></ellipse>
+            <ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(60 32 32)"><animateTransform attributeName="transform" type="rotate" from="60 32 32" to="420 32 32" dur="11s" repeatCount="indefinite" /></ellipse>
+            <ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(120 32 32)"><animateTransform attributeName="transform" type="rotate" from="120 32 32" to="480 32 32" dur="14s" repeatCount="indefinite" /></ellipse>
+          </g>
+          <circle cx="32" cy="32" r="7" fill="url(#sp-core)" />
+        </svg>
+        <h1>AURORA AI</h1>
+        <p>AI Engineering Platform</p>
+        <div class="splash-bar"><span></span></div>
+      </div>
+    </div>
     <canvas id="bg"></canvas>
     <div class="aurora" id="aurora"></div>
     <div class="aurora2" id="aurora2"></div>
@@ -247,6 +323,7 @@
           <div><h1>AURORA</h1><small>AI Engineering Platform</small></div>
         </div>
         <span class="spacer"></span>
+        <button class="pill install-btn" id="installBtn" type="button" hidden aria-label="Install app"><span aria-hidden="true">📲</span><span class="install-label">Install app</span></button>
         <span class="pill" id="engine" title="Active engine (auto-selected)">✨ auto</span>
         <span class="pill status" id="status"><span class="dot"></span><span id="statusText">connecting…</span></span>
       </header>
@@ -562,6 +639,7 @@
         document.addEventListener("click", close);
         mount.appendChild(trigger); mount.appendChild(menu);
         setLabel();
+        return { set: (value) => { current = value; setLabel(); } };
       }
 
       /* ===== boot: status + models ===== */
@@ -616,14 +694,16 @@
         ws.onmessage = (ev) => {
           const m = JSON.parse(ev.data); if (!pending) return;
           if (m.type === "token") { if (pending.dataset.pending) { pending.textContent = ""; delete pending.dataset.pending; } pending.classList.add("cursor"); pending.textContent += (pending.textContent ? " " : "") + m.content; scrollDown(); }
-          else if (m.type === "done") { pending.classList.remove("cursor"); const raw = m.content || pending.textContent; pending.classList.add("md"); pending.innerHTML = mdToHtml(raw); const sources = sourcesBox(m.sources); if (sources) pending.parentElement.appendChild(sources); const meta = document.createElement("div"); meta.className = "meta"; meta.textContent = `${m.provider} · ${m.model}`; meta.appendChild(copyBtn(raw)); pending.parentElement.appendChild(meta); setEngine(m.provider, m.model); pending = null; scrollDown(); }
+          else if (m.type === "done") { pending.classList.remove("cursor"); const raw = m.content || pending.textContent; pending.classList.add("md"); pending.innerHTML = mdToHtml(raw); const sources = sourcesBox(m.sources); if (sources) pending.parentElement.appendChild(sources); const meta = document.createElement("div"); meta.className = "meta"; meta.textContent = EFFORT_LABEL.fast; meta.appendChild(copyBtn(raw)); pending.parentElement.appendChild(meta); const hint = effortHint(m.recommended_effort, lastAsk.send, lastAsk.display); if (hint) pending.parentElement.appendChild(hint); setEngine(m.provider, m.model); pending = null; scrollDown(); }
           else if (m.type === "error") { pending.classList.remove("cursor"); pending.parentElement.classList.add("err"); pending.textContent = friendly(m.code, m.message); pending = null; scrollDown(); }
         };
         ws.onclose = () => setTimeout(connect, 1500);
       }
       connect();
-      function chatSend(sendText, displayText, images) {
-        addMsg("you", "user").textContent = displayText;
+      let lastAsk = { send: "", display: "" };
+      function chatSend(sendText, displayText, images, rerun) {
+        lastAsk = { send: sendText, display: displayText };
+        if (!rerun) addMsg("you", "user").textContent = displayText;
         pending = addMsg("aurora"); pending.innerHTML = thinking(); pending.dataset.pending = "1";
         const payload = { session_id: sessionId, message: sendText, ...routing() };
         if (images && images.length) payload.images = images;
@@ -652,7 +732,7 @@
 
       /* ===== effort dial (structured multi-agent) ===== */
       let effort = "fast";
-      customSelect(
+      const effortDial = customSelect(
         $("#effortCS"),
         [
           { value: "fast", label: "⚡ Fast · 1 agent" },
@@ -679,8 +759,25 @@
       }
 
       // Chat with a team (balanced/max) rendered like the fast chat: a markdown bubble.
-      function teamChat(task, display) {
-        addMsg("you", "user").textContent = display;
+      function effortHint(recommended, sendText, displayText) {
+        if (!recommended || recommended === effort) return null;
+        const hint = document.createElement("button");
+        hint.type = "button"; hint.className = "effort-hint";
+        hint.textContent = `Choose ${EFFORT_LABEL[recommended]} for best result`;
+        hint.onclick = () => {
+          hint.disabled = true;
+          effort = recommended;
+          effortDial.set(recommended);
+          if (effort === "fast") {
+            if (ws && ws.readyState === 1) chatSend(sendText, displayText, [], true);
+          } else {
+            teamChat(sendText, displayText, true);
+          }
+        };
+        return hint;
+      }
+      function teamChat(task, display, rerun) {
+        if (!rerun) addMsg("you", "user").textContent = display;
         const bubble = addMsg("aurora");
         bubble.innerHTML = thinking(); scrollDown();
         fetch("/collaborate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ task, mode: "chat", effort }) })
@@ -691,9 +788,11 @@
             bubble.innerHTML = mdToHtml(d.content);
             const sources = sourcesBox(d.sources); if (sources) bubble.parentElement.appendChild(sources);
             const meta = document.createElement("div"); meta.className = "meta";
-            meta.textContent = `${EFFORT_LABEL[effort]} · team`;
+            meta.textContent = EFFORT_LABEL[d.effort_used || effort] + (d.roster.length > 1 ? " · team" : "");
             meta.appendChild(copyBtn(d.content));
             bubble.parentElement.appendChild(meta);
+            const hint = effortHint(d.recommended_effort, task, display);
+            if (hint) bubble.parentElement.appendChild(hint);
             scrollDown();
           })
           .catch((e) => { bubble.parentElement.classList.add("err"); bubble.textContent = e.message; scrollDown(); });
@@ -834,6 +933,60 @@
         }
         fileInput.value = ""; renderAttach();
       });
+    </script>
+    <div class="install-hint" id="installHint" role="status" hidden></div>
+    <script>
+      (() => {
+        const splash = document.getElementById("splash");
+        const started = performance.now();
+        const finish = () => {
+          const wait = Math.max(0, 1900 - (performance.now() - started));
+          setTimeout(() => {
+            splash.classList.add("done");
+            setTimeout(() => splash.remove(), 800);
+          }, wait);
+        };
+        if (document.readyState === "complete") finish();
+        else window.addEventListener("load", finish);
+        setTimeout(() => splash.isConnected && finish(), 4000);
+      })();
+      (() => {
+        const button = document.getElementById("installBtn");
+        const hint = document.getElementById("installHint");
+        const isStandalone = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+        const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        let deferred = null;
+        let timer = null;
+        const flash = (text) => {
+          hint.textContent = text;
+          hint.hidden = false;
+          clearTimeout(timer);
+          timer = setTimeout(() => (hint.hidden = true), 7000);
+        };
+        const refresh = () => (button.hidden = isStandalone());
+        window.addEventListener("beforeinstallprompt", (event) => {
+          event.preventDefault();
+          deferred = event;
+          refresh();
+        });
+        window.addEventListener("appinstalled", () => {
+          deferred = null;
+          refresh();
+        });
+        button.addEventListener("click", async () => {
+          if (deferred) {
+            const prompt = deferred;
+            deferred = null;
+            prompt.prompt();
+            const choice = await prompt.userChoice;
+            if (choice.outcome === "accepted") flash("AURORA AI is added to your apps.");
+            refresh();
+            return;
+          }
+          flash(isIos ? "Tap Share, then Add to Home Screen." : "Open your browser menu, then choose Install app.");
+        });
+        refresh();
+      })();
     </script>
   </body>
 </html>

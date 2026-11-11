@@ -12,7 +12,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, File, UploadFile, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 
 from aurora.app.api.errors import install_error_handlers
 from aurora.app.api.schemas import (
@@ -270,21 +271,36 @@ async def _handle_ws_turn(chat: ChatService, websocket: WebSocket, data: dict) -
             "model": reply.model,
             "content": reply.content,
             "sources": [item.model_dump() for item in reply.sources],
+            "recommended_effort": reply.recommended_effort,
         }
     )
 
 
 def _mount_frontend(app: FastAPI, frontend_dir: str | None) -> None:
-    """Serve ``frontend_dir/index.html`` at ``/`` when configured."""
     if frontend_dir is None:
         return
-    index = Path(frontend_dir) / "index.html"
+    root = Path(frontend_dir)
+    index = root / "index.html"
     if not index.is_file():
         return
 
     @app.get("/", response_class=HTMLResponse)
     async def index_page() -> str:
         return index.read_text(encoding="utf-8")
+
+    @app.get("/manifest.webmanifest")
+    async def manifest() -> FileResponse:
+        return FileResponse(
+            root / "manifest.webmanifest", media_type="application/manifest+json"
+        )
+
+    @app.get("/sw.js")
+    async def service_worker() -> FileResponse:
+        return FileResponse(root / "sw.js", media_type="application/javascript")
+
+    icons = root / "icons"
+    if icons.is_dir():
+        app.mount("/icons", StaticFiles(directory=icons), name="icons")
 
 
 async def _sse(content: str) -> AsyncIterator[str]:
