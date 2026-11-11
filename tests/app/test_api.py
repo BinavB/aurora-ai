@@ -320,3 +320,11 @@ def test_keys_endpoint_activates_provider(tmp_path: Path) -> None:
     body = res.json()
     assert body["updated"] == ["groq"]
     assert "groq" in body["available"]
+
+
+def test_key_status_lists_saved_providers_without_the_keys(tmp_path: Path) -> None:
+    with _client(_echo(), tmp_path) as client:
+        client.post("/keys", json={"keys": {"groq": "gk-secret-value"}})
+        res = client.get("/keys/status")
+    assert "groq" in res.json()["connected"]
+    assert "gk-secret-value" not in res.text

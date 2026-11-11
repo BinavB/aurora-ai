@@ -77,7 +77,7 @@
       body::after { content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(120% 82% at 50% -12%, transparent 42%, rgba(3,4,10,0.8) 100%); }
 
       .shell { position: relative; z-index: 2; display: flex; height: 100vh; height: 100dvh; }
-      .side { width: 260px; flex: 0 0 260px; display: flex; flex-direction: column; gap: 0.7rem; min-height: 0; padding: 0.9rem 0.8rem calc(0.9rem + env(safe-area-inset-bottom)); border-right: 1px solid var(--stroke); background: rgba(10,12,28,0.8); -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
+      .side { position: relative; width: 260px; flex: 0 0 260px; display: flex; flex-direction: column; gap: 0.7rem; min-height: 0; margin: 0.6rem 0 0.6rem 0.6rem; padding: 0.9rem 0.8rem calc(0.9rem + env(safe-area-inset-bottom)); border: 1px solid rgba(255,255,255,0.16); border-radius: 24px; background: linear-gradient(155deg, rgba(255,255,255,0.16), rgba(255,255,255,0.02) 42%, rgba(130,120,255,0.1)), rgba(10,12,28,0.5); -webkit-backdrop-filter: blur(28px) saturate(190%) brightness(1.08); backdrop-filter: blur(28px) saturate(190%) brightness(1.08); box-shadow: inset 0 1px 0 rgba(255,255,255,0.32), inset 0 -1px 0 rgba(255,255,255,0.06), inset 0 0 22px rgba(255,255,255,0.05), 0 14px 44px rgba(0,0,0,0.4); }
       .side-btn { display: flex; align-items: center; gap: 0.6rem; width: 100%; padding: 0.6rem 0.75rem; font: inherit; font-size: 0.85rem; color: var(--ink); background: transparent; border: 1px solid var(--stroke); border-radius: 12px; cursor: pointer; text-align: left; }
       .side-btn:hover { border-color: var(--stroke-acc); }
       .side-new { color: #fff; border-color: transparent; background: var(--grad); background-size: 180% auto; box-shadow: 0 6px 18px rgba(123,108,255,0.35); font-weight: 600; }
@@ -105,7 +105,7 @@
       button.menu-btn { display: none; }
       .app { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; position: relative; }
       @media (max-width: 760px) {
-        .side { position: fixed; top: 0; bottom: 0; left: 0; z-index: 40; width: min(82vw, 290px); transform: translateX(-104%); transition: transform 0.25s ease; }
+        .side { position: fixed; top: 0.5rem; bottom: 0.5rem; left: 0.5rem; margin: 0; z-index: 40; width: min(82vw, 290px); transform: translateX(-104%); transition: transform 0.25s ease; }
         .side.open { transform: none; }
         button.menu-btn { display: inline-flex; }
       }
@@ -271,18 +271,38 @@
       .roster .chip { font-size: 0.72rem; padding: 0.3rem 0.6rem; }
       .overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(3,4,10,0.6); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
       .overlay[hidden] { display: none; }
-      .keys-card { width: min(440px, 92vw); border: 1px solid var(--stroke); border-radius: 20px; background: linear-gradient(180deg,var(--glass-2),var(--glass)); -webkit-backdrop-filter: blur(24px) saturate(140%); backdrop-filter: blur(24px) saturate(140%); box-shadow: 0 24px 70px rgba(0,0,0,0.6); padding: 1.2rem 1.3rem; }
-      .keys-card h3 { font-family: var(--display); margin: 0 0 0.3rem; font-size: 1.05rem; }
-      .keys-card label { display: flex; justify-content: space-between; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin: 0.7rem 0 0.25rem; }
-      .keys-card label a { text-transform: none; letter-spacing: 0; color: var(--accent-lt); text-decoration: none; }
-      .keys-card label a:hover { text-decoration: underline; }
-      .keys-card input { width: 100%; font: inherit; color: var(--ink); background: rgba(0,0,0,0.3); border: 1px solid var(--stroke); border-radius: 12px; padding: 0.5rem 0.7rem; outline: none; }
-      .keys-card input:focus { border-color: var(--stroke-acc); }
-      .keys-actions { display: flex; gap: 0.6rem; align-items: center; margin-top: 1rem; flex-wrap: wrap; }
-      .keys-list { max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 0.55rem; margin: 0.7rem 0; }
-      .keys-row label { display: flex; justify-content: space-between; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin: 0 0 0.2rem; }
-      .keys-row label a { text-transform: none; letter-spacing: 0; color: var(--accent-lt); text-decoration: none; }
+      .keys-card { width: min(460px, 94vw); max-height: 90dvh; display: flex; flex-direction: column; gap: 0.85rem; padding: 1.15rem 1.2rem 1.2rem; border: 1px solid rgba(255,255,255,0.16); border-radius: 26px; background: linear-gradient(155deg, rgba(255,255,255,0.14), rgba(255,255,255,0.02) 45%, rgba(130,120,255,0.1)), rgba(12,14,32,0.78); -webkit-backdrop-filter: blur(28px) saturate(180%); backdrop-filter: blur(28px) saturate(180%); box-shadow: inset 0 1px 0 rgba(255,255,255,0.28), 0 28px 80px rgba(0,0,0,0.6); }
+      .keys-head { display: flex; align-items: center; gap: 0.75rem; }
+      .keys-head > div { flex: 1; min-width: 0; }
+      .keys-head h3 { font-family: var(--display); margin: 0; font-size: 1.1rem; letter-spacing: 0.02em; }
+      .keys-head p { margin: 0.15rem 0 0; font-size: 0.78rem; color: var(--muted); }
+      .keys-badge { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex: 0 0 auto; border-radius: 13px; color: #fff; background: var(--grad); box-shadow: 0 6px 18px rgba(123,108,255,0.45); }
+      .keys-badge .ic { width: 20px; height: 20px; }
+      .keys-x { width: 34px; height: 34px; border-radius: 12px; }
+      .keys-x .ic { width: 16px; height: 16px; }
+      .keys-note { display: flex; gap: 0.65rem; align-items: flex-start; padding: 0.7rem 0.8rem; border: 1px solid rgba(143,155,255,0.3); border-radius: 14px; background: rgba(143,155,255,0.1); }
+      .keys-note .ic { width: 18px; height: 18px; margin-top: 1px; color: var(--accent-lt); }
+      .keys-note p { margin: 0; font-size: 0.78rem; line-height: 1.5; color: var(--ink); opacity: 0.88; }
+      .keys-list { flex: 1; min-height: 0; max-height: 40vh; overflow-y: auto; display: flex; flex-direction: column; gap: 0.7rem; padding-right: 0.2rem; }
       .keys-row.hide { display: none; }
+      .keys-label { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.3rem; font-size: 0.8rem; font-weight: 600; }
+      .keys-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .keys-state { display: none; align-items: center; gap: 0.25rem; font-size: 0.66rem; font-weight: 600; color: #5ee6a8; padding: 0.12rem 0.5rem; border-radius: 999px; background: rgba(94,230,168,0.12); border: 1px solid rgba(94,230,168,0.3); }
+      .keys-state .ic { width: 11px; height: 11px; }
+      .keys-row.connected .keys-state { display: inline-flex; }
+      .keys-label a { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.72rem; font-weight: 500; color: var(--accent-lt); text-decoration: none; }
+      .keys-label a:hover { text-decoration: underline; }
+      .keys-label a .ic { width: 11px; height: 11px; }
+      .keys-row input { width: 100%; font: inherit; font-size: 0.9rem; letter-spacing: 0.06em; color: var(--ink); background: rgba(0,0,0,0.3); border: 1px solid var(--stroke); border-radius: 12px; padding: 0.6rem 0.8rem; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+      .keys-row input::placeholder { letter-spacing: 0.04em; color: var(--muted-2); }
+      .keys-row.connected input::placeholder { letter-spacing: 0.25em; color: var(--muted); }
+      .keys-row input:focus { border-color: var(--stroke-acc); box-shadow: 0 0 0 3px rgba(143,155,255,0.16); }
+      .keys-foot { display: flex; flex-direction: column; gap: 0.5rem; }
+      .keys-save { display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; height: 46px; font: inherit; font-size: 0.95rem; font-weight: 600; color: #fff; border: 0; border-radius: 14px; cursor: pointer; background: var(--grad); background-size: 180% auto; box-shadow: 0 8px 24px rgba(123,108,255,0.42); transition: background-position 0.4s, transform 0.15s; }
+      .keys-save:hover { background-position: right center; }
+      .keys-save:active { transform: scale(0.985); }
+      .keys-save .ic { width: 18px; height: 18px; }
+      .keys-msg { min-height: 1.1rem; margin: 0; text-align: center; font-size: 0.78rem; color: var(--muted); }
       .attachbar { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
       .attachbar .chip { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.55rem; }
       .attachbar .chip img { width: 26px; height: 26px; object-fit: cover; border-radius: 6px; }
@@ -481,15 +501,21 @@
     </div>
 
     <div class="overlay" id="keysPanel" hidden>
-      <div class="keys-card">
-        <h3>Settings</h3>
-        <p class="tag">Search a provider, paste its API key — applied instantly (kept in memory on the server).</p>
-        <input id="keysSearch" placeholder="🔎 Search providers (gemini, groq, openai…)" autocomplete="off" />
+      <div class="keys-card" role="dialog" aria-label="Settings">
+        <div class="keys-head">
+          <span class="keys-badge" data-icon="gear"></span>
+          <div><h3>Settings</h3><p>Connect your AI models</p></div>
+          <button type="button" class="iconbtn keys-x" id="keysClose" aria-label="Close settings" data-icon="close"></button>
+        </div>
+        <div class="keys-note">
+          <span data-icon="lock"></span>
+          <p>Your API keys are sent over an encrypted connection, kept only in the server's memory, never shown to anyone and never shared. Saved keys appear as dots.</p>
+        </div>
+        <div class="side-search"><span data-icon="search"></span><input id="keysSearch" placeholder="Search providers" autocomplete="off" aria-label="Search providers" /></div>
         <div id="keysList" class="keys-list"></div>
-        <div class="keys-actions">
-          <button type="button" class="act" id="keysSave">Save &amp; connect</button>
-          <button type="button" class="iconbtn" id="keysClose" title="Close">✕</button>
-          <span class="tag" id="keysMsg"></span>
+        <div class="keys-foot">
+          <button type="button" class="keys-save" id="keysSave" data-icon="check"> Save &amp; connect</button>
+          <p class="keys-msg" id="keysMsg" role="status"></p>
         </div>
       </div>
     </div>
@@ -513,6 +539,10 @@
         pencil: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
         share: '<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.6M8.2 13.2l7.6 4.6"/>',
         unlink: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/><path d="M3 3l18 18"/>',
+        lock: '<rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+        check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+        ext: '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+        close: '<path d="M6 6l12 12M18 6 6 18"/>',
         logout: '<path d="M9 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M16 8l4 4-4 4M20 12H9"/>',
       };
       const icon = (name, size) => `<svg class="ic" viewBox="0 0 24 24" ${size ? `width="${size}" height="${size}" ` : ""}fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
@@ -1097,7 +1127,7 @@
       $("#menuBtn").addEventListener("click", () => setSide(!side.classList.contains("open")));
       scrim.addEventListener("click", () => setSide(false));
       $("#newChatBtn").addEventListener("click", startNewChat);
-      $("#settingsBtn").addEventListener("click", () => { keysPanel.hidden = false; setSide(false); });
+      $("#settingsBtn").addEventListener("click", () => { openSettings(); setSide(false); });
       const sharedToken = new URLSearchParams(location.search).get("shared");
       if (sharedToken) openShared(sharedToken);
       $("#signOutBtn").addEventListener("click", async () => {
@@ -1253,34 +1283,46 @@
         for (const p of KEY_PROVIDERS) {
           const row = document.createElement("div");
           row.className = "keys-row"; row.dataset.q = (p.name + " " + p.label).toLowerCase();
-          row.innerHTML = `<label>${p.label} <a href="${p.url}" target="_blank" rel="noopener">get key ↗</a></label>`;
+          row.innerHTML = `<div class="keys-label"><span class="keys-name">${p.label}</span><span class="keys-state">${icon("check")} Connected</span><a href="${p.url}" target="_blank" rel="noopener">Get key ${icon("ext")}</a></div>`;
           const inp = document.createElement("input");
-          inp.type = "password"; inp.autocomplete = "off"; inp.placeholder = p.name.toUpperCase() + "_API_KEY"; inp.dataset.provider = p.name;
+          inp.type = "password"; inp.autocomplete = "off"; inp.placeholder = "Paste your " + p.name + " key"; inp.dataset.provider = p.name;
           row.appendChild(inp); list.appendChild(row);
         }
       }
       buildKeysList();
+      async function loadKeyStatus() {
+        try {
+          const { connected } = await (await fetch("/keys/status")).json();
+          document.querySelectorAll("#keysList .keys-row").forEach((row) => {
+            const on = connected.includes(row.querySelector("input").dataset.provider);
+            row.classList.toggle("connected", on);
+            row.querySelector("input").placeholder = on ? "\u2022".repeat(16) : "Paste your " + row.querySelector("input").dataset.provider + " key";
+          });
+        } catch (e) { /* status is optional */ }
+      }
+      function openSettings() { $("#keysMsg").textContent = ""; keysPanel.hidden = false; loadKeyStatus(); }
       $("#keysSearch").addEventListener("input", () => {
         const q = $("#keysSearch").value.trim().toLowerCase();
         document.querySelectorAll("#keysList .keys-row").forEach((r) => r.classList.toggle("hide", q && !r.dataset.q.includes(q)));
       });
-      $("#keysBtn").addEventListener("click", () => { keysPanel.hidden = false; });
+      $("#keysBtn").addEventListener("click", openSettings);
       $("#keysClose").addEventListener("click", () => { keysPanel.hidden = true; });
       keysPanel.addEventListener("click", (e) => { if (e.target === keysPanel) keysPanel.hidden = true; });
       $("#keysSave").addEventListener("click", async () => {
         const keys = {};
         document.querySelectorAll("#keysList input").forEach((i) => { const v = i.value.trim(); if (v) keys[i.dataset.provider] = v; });
-        if (!Object.keys(keys).length) { $("#keysMsg").textContent = "Enter at least one key."; return; }
+        if (!Object.keys(keys).length) { $("#keysMsg").textContent = "Paste at least one new key to save."; return; }
         $("#keysMsg").textContent = "connecting…";
         try {
           const res = await fetch("/keys", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ keys }) });
           const data = await res.json();
           if (!res.ok) throw new Error(data.message || "failed");
-          $("#keysMsg").textContent = "✓ connected: " + data.updated.join(", ");
+          $("#keysMsg").textContent = "Connected: " + data.updated.join(", ");
+          loadKeyStatus();
           document.querySelectorAll("#keysList input").forEach((i) => (i.value = ""));
           refreshCapabilities();
           setTimeout(() => { keysPanel.hidden = true; $("#keysMsg").textContent = ""; }, 1400);
-        } catch (e) { $("#keysMsg").textContent = "⚠ " + e.message; }
+        } catch (e) { $("#keysMsg").textContent = "Could not save: " + e.message; }
       });
 
       /* ===== personality / tone (Grok-style) ===== */

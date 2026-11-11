@@ -164,6 +164,13 @@ def create_app(
         audio = transcription.available() and has_audio_provider
         return {"vision": vision, "audio": audio, "agent": enable_agent}
 
+    @app.get("/keys/status")
+    async def keys_status() -> dict[str, list[str]]:
+        connected = [
+            name for name, config in settings.providers.items() if config.api_key
+        ]
+        return {"connected": sorted(connected)}
+
     @app.post("/keys")
     async def set_keys(body: KeysBody) -> dict[str, list[str]]:
         updated = []
