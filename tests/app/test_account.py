@@ -239,3 +239,83 @@ def test_websocket_rejects_other_sites(tmp_path: Path) -> None:
         except WebSocketDisconnect:
             rejected = True
     assert rejected
+
+
+def test_rename_changes_the_listed_title(tmp_path: Path) -> None:
+    with _client(tmp_path) as client:
+        _sign_in(client)
+        _say(client, "chat-aaaa1", "first question")
+        assert client.patch(
+            "/chats/chat-aaaa1", json={"title": "  Trip   plans "}
+        ).json() == {"title": "Trip plans"}
+        chats = client.get("/chats").json()["chats"]
+    assert chats[0]["title"] == "Trip plans"
+
+
+def test_rename_rejects_blank_or_unknown_chats(tmp_path: Path) -> None:
+    with _client(tmp_path) as client:
+        _sign_in(client)
+        _say(client, "chat-aaaa1", "question")
+        assert client.patch("/chats/chat-aaaa1", json={"title": "   "}).status_code == 400
+        assert (
+            client.patch("/chats/chat-aaaa1", json={"title": "x" * 61}).status_code == 400
+        )
+        assert (
+            client.patch("/chats/chat-zzzz9", json={"title": "Nope"}).status_code == 400
+        )
+
+
+def test_search_matches_titles_and_message_text(tmp_path: Path) -> None:
+    with _client(tmp_path) as client:
+        _sign_in(client)
+        _say(client, "chat-aaaa1", "plan my Dubai trip")
+        _say(client, "chat-bbbb2", "fix the 100% broken build_step")
+        by_title = [
+            c["id"] for c in client.get("/chats", params={"q": "dubai"}).json()["chats"]
+        ]
+        by_text = [
+            c["id"]
+            for c in client.get("/chats", params={"q": "build_step"}).json()["chats"]
+        ]
+        literal_percent = [
+            c["id"] for c in client.get("/chats", params={"q": "100%"}).json()["chats"]
+        ]
+        none = client.get("/chats", params={"q": "nothing-like-this"}).json()["chats"]
+    assert by_title == ["chat-aaaa1"]
+    assert by_text == ["chat-bbbb2"]
+    assert literal_percent == ["chat-bbbb2"]
+    assert none == []
+
+
+def test_share_link_is_read_only_and_can_be_revoked(tmp_path: Path) -> None:
+    with _client(tmp_path) as client:
+        _sign_in(client)
+        _say(client, "chat-aaaa1", "shared question")
+        token = client.post("/chats/chat-aaaa1/share").json()["token"]
+        assert client.post("/chats/chat-aaaa1/share").json()["token"] == token
+        client.cookies.clear()
+        shared = client.get(f"/shared/{token}").json()["messages"]
+        assert shared[0] == {"role": "user", "content": "shared question"}
+        assert client.get("/shared/not-a-real-token-123456").status_code == 400
+        _sign_in(client)
+        assert client.delete("/chats/chat-aaaa1/share").json() == {"ok": True}
+        client.cookies.clear()
+        assert client.get(f"/shared/{token}").status_code == 400
+
+
+def test_delete_also_removes_the_title_and_share_link(tmp_path: Path) -> None:
+    with _client(tmp_path) as client:
+        _sign_in(client)
+        _say(client, "chat-aaaa1", "to delete")
+        client.patch("/chats/chat-aaaa1", json={"title": "Old name"})
+        token = client.post("/chats/chat-aaaa1/share").json()["token"]
+        client.delete("/chats/chat-aaaa1")
+        assert client.get("/chats").json()["chats"] == []
+        client.cookies.clear()
+        assert client.get(f"/shared/{token}").status_code == 400
+
+
+def test_share_and_rename_require_sign_in(tmp_path: Path) -> None:
+    with _client(tmp_path) as client:
+        assert client.patch("/chats/chat-aaaa1", json={"title": "x"}).status_code == 401
+        assert client.post("/chats/chat-aaaa1/share").status_code == 401

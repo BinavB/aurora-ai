@@ -65,6 +65,15 @@ class SqliteConversationRepository(ConversationRepository):
             for row in rows
         ]
 
+    async def sessions_containing(self, prefix: str, text: str) -> list[str]:
+        escaped = text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        rows = await self._db.query(
+            "SELECT DISTINCT session_id FROM conversations "
+            "WHERE substr(session_id, 1, ?) = ? AND content LIKE ? ESCAPE '\\'",
+            (len(prefix), prefix, f"%{escaped}%"),
+        )
+        return [row["session_id"] for row in rows]
+
 
 class SqliteRecordRepository(RecordRepository):
     """Knowledge records stored in the ``records`` table."""

@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
+from pydantic import BaseModel
 
 from aurora.app.auth import (
     AccountUser,
@@ -25,6 +26,20 @@ USER_SESSION_PREFIX = "u:"
 CHAT_LIST_LIMIT = 50
 TITLE_LIMIT = 60
 _CHAT_ID = re.compile(r"^[A-Za-z0-9_-]{6,64}$")
+_TOKEN = re.compile(r"^[A-Za-z0-9_-]{16,64}$")
+SHARED_NAMESPACE = "shared_tokens"
+
+
+def _titles_namespace(user: AccountUser) -> str:
+    return f"chat_titles:{user.id}"
+
+
+def _shares_namespace(user: AccountUser) -> str:
+    return f"chat_shares:{user.id}"
+
+
+class RenameBody(BaseModel):
+    title: str
 
 
 def user_from_cookies(
@@ -156,20 +171,31 @@ def install_account_routes(
         return response
 
     @app.get("/chats")
-    async def list_chats(request: Request) -> dict[str, list[dict[str, str]]]:
+    async def list_chats(
+        request: Request, q: str = ""
+    ) -> dict[str, list[dict[str, str]]]:
         user = require_user(request)
         prefix = _user_prefix(user)
+        titles = await memory.kv.items(_titles_namespace(user))
         summaries = await memory.chat_summaries(prefix, CHAT_LIST_LIMIT)
-        return {
-            "chats": [
+        needle = " ".join(q.split()).lower()
+        matched = set(await memory.chats_containing(prefix, needle)) if needle else set()
+        chats = []
+        for item in summaries:
+            title = (
+                _title(titles.get(item.session_id[len(prefix) :]) or item.title)
+                or "New chat"
+            )
+            if needle and needle not in title.lower() and item.session_id not in matched:
+                continue
+            chats.append(
                 {
                     "id": item.session_id[len(prefix) :],
-                    "title": _title(item.title) or "New chat",
+                    "title": title,
                     "updated_at": item.updated_at,
                 }
-                for item in summaries
-            ]
-        }
+            )
+        return {"chats": chats}
 
     @app.get("/chats/{chat_id}")
     async def read_chat(
@@ -184,11 +210,70 @@ def install_account_routes(
             ]
         }
 
+    @app.patch("/chats/{chat_id}")
+    async def rename_chat(
+        chat_id: str, body: RenameBody, request: Request
+    ) -> dict[str, str]:
+        user = require_user(request)
+        session_id = resolve_session_id(user, chat_id)
+        title = " ".join(body.title.split())
+        if not title or len(title) > TITLE_LIMIT:
+            raise ValidationError(f"Name must be 1 to {TITLE_LIMIT} characters")
+        if not await memory.conversation(session_id):
+            raise ValidationError("Chat not found")
+        await memory.kv.set(_titles_namespace(user), chat_id, title)
+        return {"title": title}
+
     @app.delete("/chats/{chat_id}")
     async def delete_chat(chat_id: str, request: Request) -> dict[str, bool]:
         user = require_user(request)
-        await memory.clear_conversation(resolve_session_id(user, chat_id))
+        session_id = resolve_session_id(user, chat_id)
+        token = await memory.kv.get(_shares_namespace(user), chat_id)
+        if token:
+            await memory.kv.delete(SHARED_NAMESPACE, token)
+            await memory.kv.delete(_shares_namespace(user), chat_id)
+        await memory.kv.delete(_titles_namespace(user), chat_id)
+        await memory.clear_conversation(session_id)
         return {"ok": True}
+
+    @app.post("/chats/{chat_id}/share")
+    async def share_chat(chat_id: str, request: Request) -> dict[str, str]:
+        user = require_user(request)
+        session_id = resolve_session_id(user, chat_id)
+        if not await memory.conversation(session_id):
+            raise ValidationError("Chat not found")
+        token = await memory.kv.get(_shares_namespace(user), chat_id)
+        if not token:
+            token = secrets.token_urlsafe(18)
+            await memory.kv.set(_shares_namespace(user), chat_id, token)
+            await memory.kv.set(SHARED_NAMESPACE, token, session_id)
+        return {"token": token}
+
+    @app.delete("/chats/{chat_id}/share")
+    async def unshare_chat(chat_id: str, request: Request) -> dict[str, bool]:
+        user = require_user(request)
+        resolve_session_id(user, chat_id)
+        token = await memory.kv.get(_shares_namespace(user), chat_id)
+        if token:
+            await memory.kv.delete(SHARED_NAMESPACE, token)
+            await memory.kv.delete(_shares_namespace(user), chat_id)
+        return {"ok": True}
+
+    @app.get("/shared/{token}")
+    async def read_shared_chat(token: str) -> dict[str, list[dict[str, str]]]:
+        session_id = (
+            await memory.kv.get(SHARED_NAMESPACE, token) if _TOKEN.match(token) else None
+        )
+        if session_id is None:
+            raise ValidationError("This shared chat is no longer available")
+        history = await memory.conversation(session_id)
+        return {
+            "messages": [
+                {"role": message.role.value, "content": message.content}
+                for message in history
+                if message.role.value in {"user", "assistant"}
+            ]
+        }
 
 
 def _failed() -> Response:

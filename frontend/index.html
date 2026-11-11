@@ -77,11 +77,18 @@
       body::after { content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(120% 82% at 50% -12%, transparent 42%, rgba(3,4,10,0.8) 100%); }
 
       .shell { position: relative; z-index: 2; display: flex; height: 100vh; height: 100dvh; }
-      .side { width: 260px; flex: 0 0 260px; display: flex; flex-direction: column; gap: 0.7rem; min-height: 0; padding: 0.9rem 0.8rem calc(0.9rem + env(safe-area-inset-bottom)); border-right: 1px solid var(--stroke); background: rgba(6,8,18,0.8); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
-      .side-title { font-family: var(--display); font-weight: 700; letter-spacing: 0.18em; padding: 0.2rem 0.4rem; }
+      .side { width: 260px; flex: 0 0 260px; display: flex; flex-direction: column; gap: 0.7rem; min-height: 0; padding: 0.9rem 0.8rem calc(0.9rem + env(safe-area-inset-bottom)); border-right: 1px solid var(--stroke); background: rgba(10,12,28,0.8); -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
       .side-btn { display: flex; align-items: center; gap: 0.6rem; width: 100%; padding: 0.6rem 0.75rem; font: inherit; font-size: 0.85rem; color: var(--ink); background: transparent; border: 1px solid var(--stroke); border-radius: 12px; cursor: pointer; text-align: left; }
       .side-btn:hover { border-color: var(--stroke-acc); }
-      .side-new { background: rgba(143,155,255,0.12); border-color: var(--stroke-acc); color: var(--accent-lt); }
+      .side-new { color: #fff; border-color: transparent; background: var(--grad); background-size: 180% auto; box-shadow: 0 6px 18px rgba(123,108,255,0.35); font-weight: 600; }
+      .side-new:hover { background-position: right center; }
+      .side-btn .ic { color: var(--accent-lt); }
+      .side-new .ic { color: #fff; }
+      .ic { width: 1.15em; height: 1.15em; flex: 0 0 auto; }
+      .iconbtn .ic { width: 20px; height: 20px; }
+      .copy .ic, .dl .ic { width: 12px; height: 12px; vertical-align: -2px; margin-right: 2px; }
+      .pill .ic { width: 14px; height: 14px; color: var(--accent-lt); }
+      @media (min-width: 761px) { header .brand { display: none; } }
       .side-label { margin: 0.4rem 0 0; font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted-2); }
       .side-chats { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 0.35rem; }
       .side-hint { margin: 0; font-size: 0.78rem; color: var(--muted-2); }
@@ -231,7 +238,6 @@
         .row2 { gap: 0.4rem 0.45rem; }            /* wrap keeps persona (emotion) visible */
         .row2 .hint { display: none; }            /* free space so all dials fit */
         #keysBtn { display: none; }               /* hide Keys on phones */
-        #attachBtn, #micBtn { display: none; }    /* hide camera + mic on phones */
         /* collapsed dials show emoji + one word; extra words show in the open menu */
         .cs-trigger .cs-rest { display: none; }
         /* opened menus fit the screen and wrap long labels instead of overflowing */
@@ -318,7 +324,21 @@
       .chat-open { flex: 1; min-width: 0; text-align: left; cursor: pointer; font: inherit; font-size: 0.86rem; color: var(--ink); background: rgba(0,0,0,0.28); border: 1px solid var(--stroke); border-radius: 12px; padding: 0.55rem 0.7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .chat-open:hover, .chat-open.current { border-color: var(--stroke-acc); }
       .chat-open.current { color: var(--accent-lt); }
-      .chat-del { width: 34px; height: 34px; font-size: 0.85rem; }
+      .side-search { position: relative; }
+      .side-search .ic { position: absolute; left: 0.65rem; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--muted-2); pointer-events: none; }
+      .side-search input { width: 100%; font: inherit; font-size: 0.85rem; color: var(--ink); background: rgba(0,0,0,0.28); border: 1px solid var(--stroke); border-radius: 12px; padding: 0.5rem 0.7rem 0.5rem 2.1rem; outline: none; }
+      .side-search input:focus { border-color: var(--stroke-acc); }
+      .chat-item { position: relative; }
+      .chat-more { width: 30px; height: 30px; flex: 0 0 auto; }
+      .chat-rename { flex: 1; min-width: 0; font: inherit; font-size: 0.86rem; color: var(--ink); background: rgba(0,0,0,0.3); border: 1px solid var(--stroke-acc); border-radius: 12px; padding: 0.5rem 0.7rem; outline: none; }
+      .row-menu { position: absolute; right: 0; top: calc(100% - 4px); z-index: 20; min-width: 170px; display: flex; flex-direction: column; gap: 2px; padding: 0.35rem; border-radius: 12px; border: 1px solid var(--stroke-acc); background: rgba(12,14,30,0.97); box-shadow: 0 14px 40px rgba(0,0,0,0.5); }
+      .row-menu[hidden] { display: none; }
+      .row-menu button { display: flex; align-items: center; gap: 0.55rem; width: 100%; padding: 0.5rem 0.6rem; font: inherit; font-size: 0.82rem; color: var(--ink); background: transparent; border: 0; border-radius: 8px; cursor: pointer; text-align: left; }
+      .row-menu button:hover { background: rgba(255,255,255,0.07); }
+      .row-menu button .ic { width: 15px; height: 15px; color: var(--accent-lt); }
+      .row-menu button.danger, .row-menu button.danger .ic { color: #ff8fa6; }
+      .shared-banner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; max-width: 900px; margin: 0 auto; padding: 0.6rem 0.9rem; border: 1px solid var(--stroke-acc); border-radius: 12px; background: rgba(143,155,255,0.1); font-size: 0.82rem; color: var(--muted); }
+      .shared-banner a { color: var(--accent-lt); text-decoration: none; font-weight: 600; }
       .toast { position: fixed; left: 50%; bottom: calc(1.2rem + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 60; max-width: 90vw; padding: 0.6rem 1rem; border-radius: 12px; border: 1px solid var(--stroke-acc); background: var(--glass-2); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); color: var(--ink); font-size: 0.85rem; }
       .install-hint { position: fixed; left: 50%; bottom: 1.2rem; transform: translateX(-50%); z-index: 90; max-width: min(92vw, 420px); padding: 0.7rem 1rem; border-radius: 14px; border: 1px solid var(--stroke-acc); background: rgba(12,14,30,0.92); color: var(--ink); font-size: 0.86rem; text-align: center; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
       @media (prefers-reduced-motion: reduce) {
@@ -354,25 +374,40 @@
 
     <div class="shell">
     <aside class="side" id="side" aria-label="Sidebar">
-      <div class="side-title">AURORA</div>
-      <button type="button" class="side-btn side-new" id="newChatBtn"><span aria-hidden="true">＋</span> New chat</button>
+      <div class="brand side-brand">
+        <svg class="logo" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+            <defs>
+              <radialGradient id="sbcore" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffffff" /><stop offset="40%" stop-color="#a97bff" /><stop offset="100%" stop-color="#4d8dff" /></radialGradient>
+              <linearGradient id="sbring" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4d8dff" /><stop offset="50%" stop-color="#a97bff" /><stop offset="100%" stop-color="#ff7bc5" /></linearGradient>
+            </defs>
+            <g stroke="url(#sbring)" stroke-width="1.6" opacity="0.9">
+              <ellipse cx="32" cy="32" rx="26" ry="10"><animateTransform attributeName="transform" type="rotate" from="0 32 32" to="360 32 32" dur="14s" repeatCount="indefinite" /></ellipse>
+              <ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(60 32 32)"><animateTransform attributeName="transform" type="rotate" from="60 32 32" to="420 32 32" dur="18s" repeatCount="indefinite" /></ellipse>
+              <ellipse cx="32" cy="32" rx="26" ry="10" transform="rotate(120 32 32)"><animateTransform attributeName="transform" type="rotate" from="120 32 32" to="480 32 32" dur="22s" repeatCount="indefinite" /></ellipse>
+            </g>
+            <circle cx="32" cy="32" r="7" fill="url(#sbcore)" />
+          </svg>
+        <div><h1>AURORA</h1><small>AI Engineering Platform</small></div>
+      </div>
+      <button type="button" class="side-btn side-new" id="newChatBtn" data-icon="plus"> New chat</button>
       <p class="side-label">Chats</p>
+      <div class="side-search"><span data-icon="search"></span><input id="chatSearch" type="search" placeholder="Search chats" autocomplete="off" aria-label="Search chats" /></div>
       <div class="side-chats" id="chatList"></div>
       <p class="side-hint" id="chatsEmpty" hidden></p>
       <div class="side-foot">
-        <button type="button" class="side-btn" id="settingsBtn"><span aria-hidden="true">⚙️</span> Settings</button>
+        <button type="button" class="side-btn" id="settingsBtn" data-icon="gear"> Settings</button>
         <div class="side-profile" id="profileIn" hidden>
           <span class="avatar" id="accountAvatar"></span>
           <div class="side-who"><strong id="accountName"></strong><span id="accountEmail"></span></div>
         </div>
-        <button type="button" class="side-btn" id="signOutBtn" hidden>Sign out</button>
+        <button type="button" class="side-btn" id="signOutBtn" hidden data-icon="logout"> Sign out</button>
         <button type="button" class="google-cta" id="signInBtn" hidden aria-label="Continue with Google"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>Continue with Google</button>
       </div>
     </aside>
     <div class="scrim" id="scrim" hidden></div>
     <div class="app">
       <header>
-        <button type="button" class="iconbtn menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
+        <button type="button" class="iconbtn menu-btn" id="menuBtn" aria-label="Open menu" data-icon="menu"></button>
         <div class="brand">
           <svg class="logo" viewBox="0 0 64 64" fill="none" aria-hidden="true">
             <defs>
@@ -390,7 +425,7 @@
         </div>
         <span class="spacer"></span>
         <button class="pill install-btn" id="installBtn" type="button" hidden aria-label="Install app"><svg class="install-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m6 10 6 6 6-6"/><path d="M4 21h16"/></svg><span class="install-label">Install app</span></button>
-        <span class="pill" id="engine" title="Active engine (auto-selected)">✨ auto</span>
+        <span class="pill" id="engine" title="Active engine (auto-selected)"></span>
       </header>
 
       <main>
@@ -426,8 +461,8 @@
           <div class="bar">
             <textarea id="input" rows="1" placeholder="Ask AURORA anything…"></textarea>
             <input type="file" id="fileInput" multiple hidden accept="image/*,text/*,.md,.py,.js,.ts,.jsx,.tsx,.json,.csv,.html,.css,.yml,.yaml,.xml,.sh" />
-            <button type="button" id="attachBtn" class="iconbtn" title="Attach photo / file" hidden>📎</button>
-            <button type="button" id="micBtn" class="iconbtn" title="Dictate (Whisper)" hidden>🎙️</button>
+            <button type="button" id="attachBtn" class="iconbtn" title="Attach photo / file" aria-label="Attach photo or file" data-icon="clip"></button>
+            <button type="button" id="micBtn" class="iconbtn" title="Speak your message" aria-label="Speak your message" data-icon="mic"></button>
             <button type="button" id="sendBtn" class="iconbtn send" title="Send"><svg class="planeicon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
           </div>
           <div class="implExtras" id="implExtras" hidden>
@@ -437,7 +472,7 @@
             <span id="modelCS"></span>
             <span id="effortCS"></span>
             <span id="personaCS"></span>
-            <button type="button" class="pill" id="keysBtn" title="Connect model API keys">⚙️ Keys</button>
+            <button type="button" class="pill" id="keysBtn" title="Connect model API keys" data-icon="gear"> Keys</button>
             <span class="hint">↵ send · ⇧↵ newline</span>
           </div>
         </div>
@@ -461,6 +496,28 @@
 
     <script>
       const $ = (s) => document.querySelector(s);
+      const ICONS = {
+        menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+        plus: '<path d="M12 5v14M5 12h14"/>',
+        gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h0a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+        clip: '<path d="m21 11.5-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9"/>',
+        mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+        stop: '<rect x="6" y="6" width="12" height="12" rx="2.5"/>',
+        volume: '<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>',
+        download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+        trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+        doc: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
+        spark: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>',
+        search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
+        more: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
+        pencil: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
+        share: '<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.6M8.2 13.2l7.6 4.6"/>',
+        unlink: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/><path d="M3 3l18 18"/>',
+        logout: '<path d="M9 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M16 8l4 4-4 4M20 12H9"/>',
+      };
+      const icon = (name, size) => `<svg class="ic" viewBox="0 0 24 24" ${size ? `width="${size}" height="${size}" ` : ""}fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
+      document.querySelectorAll("[data-icon]").forEach((el) => el.insertAdjacentHTML("afterbegin", icon(el.dataset.icon)));
+      $("#engine").innerHTML = icon("spark") + " auto";
 
       /* ===== galaxy background (starfield + spiral + constellations + nodes) ===== */
       (() => {
@@ -555,27 +612,26 @@
         .split("/").pop()
         .replace(/-(latest|versatile|instruct)$/i, "")
         .replace(/-\d+b-\d+e.*$/i, "");
-      const setEngine = (p, m) => { $("#engine").textContent = `✨ ${shortModel(m)}`; };
+      const setEngine = (p, m) => { $("#engine").innerHTML = icon("spark") + " " + esc(shortModel(m)); };
       async function refreshCapabilities() {
         try {
           const cap = await (await fetch("/capabilities")).json();
-          $("#attachBtn").hidden = !cap.vision;
+          visionReady = !!cap.vision;
           serverAudio = !!cap.audio;
           refreshVoiceUi();
         } catch { /* leave hidden */ }
       }
       const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition || null;
       const canSpeak = "speechSynthesis" in window;
-      let serverAudio = false, speakingUtterance = null;
+      let serverAudio = false, visionReady = false, speakingUtterance = null;
       const spokenText = (text) => String(text).replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/https?:\/\/\S+/g, "").replace(/^\s*[-*_]{3,}\s*$/gm, "").replace(/[*_`#>|]/g, " ").slice(0, 4000);
       function refreshVoiceUi() {
         const mic = $("#micBtn");
         const speaking = speakingUtterance !== null;
-        mic.hidden = !(speaking || SpeechRec || serverAudio);
         mic.classList.toggle("speaking", speaking);
-        if (speaking) { mic.textContent = "⏹"; mic.title = "Stop reading aloud"; }
-        else if (!mic.classList.contains("rec")) { mic.textContent = "🎙️"; mic.title = "Speak your message"; }
-        document.querySelectorAll(".speak").forEach((b) => { b.textContent = b.dataset.active ? "⏹ stop" : "🔊 read"; });
+        if (speaking) { mic.innerHTML = icon("stop"); mic.title = "Stop reading aloud"; }
+        else if (!mic.classList.contains("rec")) { mic.innerHTML = icon("mic"); mic.title = "Speak your message"; }
+        document.querySelectorAll(".speak").forEach((b) => { b.innerHTML = icon(b.dataset.active ? "stop" : "volume") + (b.dataset.active ? " stop" : " read"); });
       }
       function stopSpeaking() {
         speakingUtterance = null;
@@ -598,7 +654,7 @@
       }
       function speakBtn(text) {
         if (!canSpeak) return document.createDocumentFragment();
-        const b = document.createElement("button"); b.type = "button"; b.className = "copy speak"; b.textContent = "🔊 read";
+        const b = document.createElement("button"); b.type = "button"; b.className = "copy speak"; b.innerHTML = icon("volume") + " read";
         b.onclick = () => { if (b.dataset.active) stopSpeaking(); else speak(text, b); };
         return b;
       }
@@ -628,7 +684,7 @@
         document.body.appendChild(a); a.click(); a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 2000);
       }
-      function downloadBtn(name, text) { const b = document.createElement("button"); b.type = "button"; b.className = "dl"; b.textContent = "⬇️ download"; b.onclick = () => downloadFile(name, text); return b; }
+      function downloadBtn(name, text) { const b = document.createElement("button"); b.type = "button"; b.className = "dl"; b.innerHTML = icon("download") + " download"; b.onclick = () => downloadFile(name, text); return b; }
       const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
       /* tiny, safe markdown -> HTML so replies render pretty (no ** left over) */
       const BINAV_SEARCH_URL = "https://www.google.com/search?q=binav.b";
@@ -826,7 +882,7 @@
       (() => {
         const micBtn = $("#micBtn"), input = $("#input");
         let recorder = null, chunks = [], recording = false, recognition = null;
-        const setRecording = (on) => { recording = on; micBtn.classList.toggle("rec", on); micBtn.textContent = on ? "⏺" : "🎙️"; refreshVoiceUi(); };
+        const setRecording = (on) => { recording = on; micBtn.classList.toggle("rec", on); micBtn.innerHTML = icon(on ? "stop" : "mic"); refreshVoiceUi(); };
         function listen() {
           recognition = new SpeechRec();
           recognition.lang = "en-GB"; recognition.interimResults = false; recognition.continuous = false;
@@ -858,7 +914,7 @@
         micBtn.addEventListener("click", () => {
           if (speakingUtterance) { stopSpeaking(); return; }
           if (recording) { if (recognition) recognition.stop(); else recorder.stop(); return; }
-          if (SpeechRec) listen(); else record();
+          if (SpeechRec) listen(); else if (serverAudio) record(); else toast("Voice input is not supported in this browser.");
         });
         refreshVoiceUi();
       })();
@@ -915,7 +971,7 @@
       }
       function showAccount(user) {
         currentUser = user;
-        $("#signInBtn").hidden = !!user || !googleReady;
+        $("#signInBtn").hidden = !!user;
         $("#profileIn").hidden = !user;
         $("#signOutBtn").hidden = !user;
         if (user) { paintAvatar($("#accountAvatar"), user); $("#accountName").textContent = user.name; $("#accountEmail").textContent = user.email; }
@@ -933,7 +989,7 @@
       }
       function startNewChat() {
         stopSpeaking(); sessionId = newChatId(); resetSaved(sessionId, []); pending = null; lastAsk = { send: "", display: "" };
-        log.innerHTML = heroHtml; setSide(false); loadChats();
+        log.innerHTML = heroHtml; input.disabled = false; $("#sendBtn").disabled = false; input.placeholder = PLACEHOLDER[mode]; setSide(false); loadChats();
       }
       function renderSaved(messages) {
         log.innerHTML = "";
@@ -948,38 +1004,102 @@
         try {
           const res = await fetch("/chats/" + encodeURIComponent(id)); if (!res.ok) throw new Error();
           const { messages } = await res.json();
-          sessionId = id; pending = null; resetSaved(id, messages.filter((m) => m.role === "user" || m.role === "assistant").map((m) => ({ role: m.role === "user" ? "user" : "aurora", text: m.content }))); renderSaved(messages); setSide(false); loadChats();
+          sessionId = id; pending = null; resetSaved(id, messages.filter((m) => m.role === "user" || m.role === "assistant").map((m) => ({ role: m.role === "user" ? "user" : "aurora", text: m.content }))); input.disabled = false; $("#sendBtn").disabled = false; renderSaved(messages); setSide(false); loadChats();
         } catch (e) { toast("Could not open that chat."); }
+      }
+      const closeMenus = () => document.querySelectorAll(".row-menu").forEach((m) => (m.hidden = true));
+      document.addEventListener("click", (e) => { if (!e.target.closest(".chat-item")) closeMenus(); });
+      function menuItem(iconName, label, onPick, danger) {
+        const b = document.createElement("button"); b.type = "button"; if (danger) b.className = "danger";
+        b.innerHTML = icon(iconName) + " " + label; b.onclick = () => { closeMenus(); onPick(); };
+        return b;
       }
       function chatRow(chat) {
         const row = document.createElement("div"); row.className = "chat-item";
-        const open = document.createElement("button"); open.type = "button"; open.className = "chat-open" + (chat.id === sessionId ? " current" : ""); open.textContent = chat.title; open.onclick = () => openChat(chat.id);
-        const del = document.createElement("button"); del.type = "button"; del.className = "iconbtn chat-del"; del.title = "Delete chat"; del.setAttribute("aria-label", "Delete chat"); del.textContent = "🗑";
-        del.onclick = async () => {
-          const res = await fetch("/chats/" + encodeURIComponent(chat.id), { method: "DELETE" });
-          if (!res.ok) { toast("Could not delete that chat."); return; }
-          row.remove(); $("#chatsEmpty").hidden = $("#chatList").children.length > 0;
-          if (chat.id === sessionId) startNewChat();
-        };
-        row.append(open, del); return row;
+        const open = document.createElement("button"); open.type = "button"; open.className = "chat-open" + (chat.id === sessionId ? " current" : ""); open.textContent = chat.title; open.title = chat.title; open.onclick = () => openChat(chat.id);
+        const more = document.createElement("button"); more.type = "button"; more.className = "iconbtn chat-more"; more.setAttribute("aria-label", "Chat options"); more.innerHTML = icon("more", 16);
+        const menu = document.createElement("div"); menu.className = "row-menu"; menu.hidden = true;
+        more.onclick = (e) => { e.stopPropagation(); const wasHidden = menu.hidden; closeMenus(); menu.hidden = !wasHidden; };
+        menu.append(
+          menuItem("pencil", "Rename", () => renameRow(row, chat)),
+          menuItem("share", "Share chat", () => shareChat(chat)),
+          menuItem("unlink", "Stop sharing", () => stopSharing(chat)),
+          menuItem("trash", "Delete", () => deleteChat(row, chat), true)
+        );
+        row.append(open, more, menu); return row;
       }
+      function renameRow(row, chat) {
+        const input = document.createElement("input"); input.className = "chat-rename"; input.value = chat.title; input.maxLength = 60; input.setAttribute("aria-label", "Chat name");
+        let finished = false;
+        const finish = async (save) => {
+          if (finished) return; finished = true;
+          const title = input.value.trim();
+          if (!save || !title || title === chat.title) { loadChats(); return; }
+          const res = await fetch("/chats/" + encodeURIComponent(chat.id), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title }) });
+          if (!res.ok) toast("Could not rename that chat.");
+          loadChats();
+        };
+        input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); finish(true); } if (e.key === "Escape") finish(false); });
+        input.addEventListener("blur", () => finish(true));
+        row.replaceChild(input, row.querySelector(".chat-open"));
+        input.focus(); input.select();
+      }
+      async function shareChat(chat) {
+        try {
+          const res = await fetch("/chats/" + encodeURIComponent(chat.id) + "/share", { method: "POST" });
+          if (!res.ok) throw new Error();
+          const url = location.origin + "/?shared=" + (await res.json()).token;
+          if (navigator.share) {
+            try { await navigator.share({ title: chat.title, url }); return; } catch (e) { if (e.name === "AbortError") return; }
+          }
+          await navigator.clipboard.writeText(url);
+          toast("Share link copied. Anyone with it can read this chat.");
+        } catch (e) { toast("Could not create a share link."); }
+      }
+      async function stopSharing(chat) {
+        const res = await fetch("/chats/" + encodeURIComponent(chat.id) + "/share", { method: "DELETE" });
+        toast(res.ok ? "Sharing stopped. The old link no longer works." : "Could not stop sharing.");
+      }
+      async function deleteChat(row, chat) {
+        if (!confirm(`Delete "${chat.title}"? This cannot be undone.`)) return;
+        const res = await fetch("/chats/" + encodeURIComponent(chat.id), { method: "DELETE" });
+        if (!res.ok) { toast("Could not delete that chat."); return; }
+        row.remove(); $("#chatsEmpty").hidden = $("#chatList").children.length > 0;
+        if (chat.id === sessionId) startNewChat();
+      }
+      let searchTimer = null;
       async function loadChats() {
-        const list = $("#chatList"), hint = $("#chatsEmpty");
+        const list = $("#chatList"), hint = $("#chatsEmpty"), q = $("#chatSearch").value.trim();
         list.textContent = "";
         if (!currentUser) { hint.textContent = "Sign in to save your chats to your account."; hint.hidden = false; return; }
         try {
-          const res = await fetch("/chats"); if (!res.ok) throw new Error();
+          const res = await fetch("/chats" + (q ? "?q=" + encodeURIComponent(q) : "")); if (!res.ok) throw new Error();
           const { chats } = await res.json();
           chats.forEach((chat) => list.appendChild(chatRow(chat)));
-          hint.textContent = "No saved chats yet. Start talking and they will appear here.";
+          hint.textContent = q ? "No chats match your search." : "No saved chats yet. Start talking and they will appear here.";
           hint.hidden = chats.length > 0;
         } catch (e) { hint.textContent = "Could not load your chats."; hint.hidden = false; }
       }
-      $("#signInBtn").addEventListener("click", () => { location.href = "/auth/google/login"; });
+      $("#chatSearch").addEventListener("input", () => { clearTimeout(searchTimer); searchTimer = setTimeout(loadChats, 250); });
+      async function openShared(token) {
+        try {
+          const res = await fetch("/shared/" + encodeURIComponent(token)); if (!res.ok) throw new Error();
+          const { messages } = await res.json();
+          stopSpeaking(); pending = null; renderSaved(messages);
+          const banner = document.createElement("div"); banner.className = "shared-banner";
+          banner.innerHTML = "<span>Shared chat, read only.</span>";
+          const start = document.createElement("a"); start.href = "/"; start.textContent = "Start your own chat";
+          banner.appendChild(start); log.prepend(banner);
+          input.disabled = true; $("#sendBtn").disabled = true; input.placeholder = "Read-only shared chat";
+        } catch (e) { toast("This shared chat is no longer available."); }
+      }
+      $("#signInBtn").addEventListener("click", () => { if (!googleReady) { toast("Google sign-in is not set up on this server yet."); return; } location.href = "/auth/google/login"; });
       $("#menuBtn").addEventListener("click", () => setSide(!side.classList.contains("open")));
       scrim.addEventListener("click", () => setSide(false));
       $("#newChatBtn").addEventListener("click", startNewChat);
       $("#settingsBtn").addEventListener("click", () => { keysPanel.hidden = false; setSide(false); });
+      const sharedToken = new URLSearchParams(location.search).get("shared");
+      if (sharedToken) openShared(sharedToken);
       $("#signOutBtn").addEventListener("click", async () => {
         await fetch("/auth/logout", { method: "POST" });
         showAccount(null); startNewChat();
@@ -1198,7 +1318,7 @@
         const bar = $("#attachBar"); bar.innerHTML = ""; bar.hidden = attachments.length === 0;
         attachments.forEach((a, i) => {
           const c = document.createElement("span"); c.className = "chip";
-          c.innerHTML = a.kind === "image" ? `<img src="${a.dataUrl}" alt="">` : "📄";
+          c.innerHTML = a.kind === "image" ? `<img src="${a.dataUrl}" alt="">` : icon("doc");
           const label = document.createElement("span"); label.textContent = a.name; c.appendChild(label);
           const x = document.createElement("button"); x.type = "button"; x.textContent = "✕";
           x.onclick = () => { attachments.splice(i, 1); renderAttach(); };
@@ -1208,7 +1328,8 @@
       $("#attachBtn").addEventListener("click", () => fileInput.click());
       fileInput.addEventListener("change", async () => {
         for (const f of fileInput.files) {
-          if (f.type.startsWith("image/")) attachments.push({ kind: "image", name: f.name, dataUrl: await readAs(f, "readAsDataURL") });
+          if (f.type.startsWith("image/") && !visionReady) toast("Photos need a vision model. Add a key in Settings.");
+          else if (f.type.startsWith("image/")) attachments.push({ kind: "image", name: f.name, dataUrl: await readAs(f, "readAsDataURL") });
           else if (f.type.startsWith("text/") || /\.(md|py|js|ts|jsx|tsx|json|csv|html|css|yml|yaml|xml|txt|sh)$/i.test(f.name)) attachments.push({ kind: "file", name: f.name, text: await readAs(f, "readAsText") });
           else attachments.push({ kind: "other", name: f.name });
         }

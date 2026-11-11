@@ -73,6 +73,9 @@ class MemoryStore:
     async def chat_summaries(self, prefix: str, limit: int = 50) -> list[ChatSummary]:
         return await self.conversations.summaries(prefix, limit)
 
+    async def chats_containing(self, prefix: str, text: str) -> list[str]:
+        return await self.conversations.sessions_containing(prefix, text)
+
     # --- knowledge records -----------------------------------------------
 
     async def remember(self, kind: RecordKind, title: str, body: str) -> int:

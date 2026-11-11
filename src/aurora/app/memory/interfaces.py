@@ -30,6 +30,10 @@ class ConversationRepository(ABC):
     async def summaries(self, prefix: str, limit: int) -> list[ChatSummary]:
         """Return the newest sessions whose id starts with ``prefix``."""
 
+    @abstractmethod
+    async def sessions_containing(self, prefix: str, text: str) -> list[str]:
+        """Return sessions under ``prefix`` whose message text contains ``text``."""
+
 
 class RecordRepository(ABC):
     """Persistence for durable knowledge records."""
