@@ -1040,7 +1040,9 @@
           if (messages.length) { sessionId = id; renderSaved(messages); loadChats(); }
         } catch (e) { /* stay on a fresh chat */ }
       }
+      const isEmptyChat = () => !log.querySelector(".msg") && !pending;
       function startNewChat() {
+        if (isEmptyChat()) { setSide(false); input.focus(); return; }
         stopSpeaking(); sessionId = newChatId(); persistLocal(); pending = null; lastAsk = { send: "", display: "" };
         log.innerHTML = heroHtml; input.disabled = false; $("#sendBtn").disabled = false; input.placeholder = PLACEHOLDER[mode]; setSide(false); loadChats();
       }
@@ -1074,12 +1076,17 @@
       }
       function chatRow(chat) {
         const row = document.createElement("div"); row.className = "chat-item";
+        if (chat.draft) {
+          const draft = document.createElement("button"); draft.type = "button"; draft.className = "chat-open current"; draft.textContent = "New chat";
+          draft.onclick = () => { setSide(false); input.focus(); };
+          row.append(draft); return row;
+        }
         const open = document.createElement("button"); open.type = "button"; open.className = "chat-open" + (chat.id === sessionId ? " current" : ""); open.textContent = chat.title; open.title = chat.title; open.onclick = () => openChat(chat.id, chat.local);
         const more = document.createElement("button"); more.type = "button"; more.className = "iconbtn chat-more"; more.setAttribute("aria-label", "Chat options"); more.innerHTML = icon("more", 16);
         const menu = document.createElement("div"); menu.className = "row-menu"; menu.hidden = true;
         more.onclick = (e) => { e.stopPropagation(); const wasHidden = menu.hidden; closeMenus(); menu.hidden = !wasHidden; };
         menu.append(menuItem("pencil", "Rename", () => renameRow(row, chat)));
-        if (!chat.local) menu.append(menuItem("share", "Share chat", () => shareChat(chat)), menuItem("unlink", "Stop sharing", () => stopSharing(chat)));
+        menu.append(menuItem("share", "Share chat", () => shareChat(chat)), menuItem("unlink", "Stop sharing", () => stopSharing(chat)));
         menu.append(menuItem("trash", "Delete", () => deleteChat(row, chat), true));
         row.append(open, more, menu); return row;
       }
@@ -1100,19 +1107,41 @@
         row.replaceChild(input, row.querySelector(".chat-open"));
         input.focus(); input.select();
       }
-      async function shareChat(chat) {
-        try {
+      const jsonPost = (url, body) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      async function createShareToken(chat) {
+        if (!chat.local) {
           const res = await fetch("/chats/" + encodeURIComponent(chat.id) + "/share", { method: "POST" });
           if (!res.ok) throw new Error();
-          const url = location.origin + "/?shared=" + (await res.json()).token;
+          return (await res.json()).token;
+        }
+        const saved = localChats[chat.id];
+        if (!saved || !saved.turns.length) throw new Error();
+        if (saved.manage) await fetch("/shares/" + encodeURIComponent(saved.manage), { method: "DELETE" });
+        const res = await jsonPost("/shares", { title: saved.title, messages: saved.turns.map((t) => ({ role: t.role === "user" ? "user" : "assistant", content: t.text })) });
+        if (!res.ok) throw new Error();
+        const { token, manage } = await res.json();
+        saved.manage = manage; persistLocal();
+        return token;
+      }
+      async function shareChat(chat) {
+        try {
+          const url = location.origin + "/?shared=" + (await createShareToken(chat));
           if (navigator.share) {
-            try { await navigator.share({ title: chat.title, url }); return; } catch (e) { if (e.name === "AbortError") return; }
+            try { await navigator.share({ title: chat.title, text: "Take a look at this chat on AURORA", url }); return; } catch (e) { if (e.name === "AbortError") return; }
           }
           await navigator.clipboard.writeText(url);
-          toast("Share link copied. Anyone with it can read this chat.");
+          toast("Share link copied. Send it to your friends, they can read this chat without signing in.");
         } catch (e) { toast("Could not create a share link."); }
       }
       async function stopSharing(chat) {
+        if (chat.local) {
+          const saved = localChats[chat.id];
+          if (!saved || !saved.manage) { toast("This chat is not shared."); return; }
+          const res = await fetch("/shares/" + encodeURIComponent(saved.manage), { method: "DELETE" });
+          if (res.ok) { delete saved.manage; persistLocal(); }
+          toast(res.ok ? "Sharing stopped. The old link no longer works." : "Could not stop sharing.");
+          return;
+        }
         const res = await fetch("/chats/" + encodeURIComponent(chat.id) + "/share", { method: "DELETE" });
         toast(res.ok ? "Sharing stopped. The old link no longer works." : "Could not stop sharing.");
       }
@@ -1133,6 +1162,7 @@
         if (!currentUser) {
           const needle = q.toLowerCase();
           const mine = Object.values(localChats).filter((c) => c.turns.length && (!needle || c.title.toLowerCase().includes(needle) || c.turns.some((t) => t.text.toLowerCase().includes(needle)))).sort((x, y) => y.updated - x.updated);
+          if (!q && isEmptyChat()) list.appendChild(chatRow({ id: sessionId, draft: true }));
           mine.forEach((c) => list.appendChild(chatRow({ id: c.id, title: c.title || "New chat", local: true })));
           hint.textContent = q && !mine.length ? "No chats match your search." : "Saved on this device. Sign in to keep your chats on every device.";
           hint.hidden = false; return;
@@ -1140,6 +1170,7 @@
         try {
           const res = await fetch("/chats" + (q ? "?q=" + encodeURIComponent(q) : "")); if (!res.ok) throw new Error();
           const { chats } = await res.json();
+          if (!q && isEmptyChat()) list.appendChild(chatRow({ id: sessionId, draft: true }));
           chats.forEach((chat) => list.appendChild(chatRow(chat)));
           hint.textContent = q ? "No chats match your search." : "No saved chats yet. Start talking and they will appear here.";
           hint.hidden = chats.length > 0;
@@ -1149,10 +1180,10 @@
       async function openShared(token) {
         try {
           const res = await fetch("/shared/" + encodeURIComponent(token)); if (!res.ok) throw new Error();
-          const { messages } = await res.json();
+          const { messages, title } = await res.json();
           stopSpeaking(); pending = null; renderSaved(messages);
           const banner = document.createElement("div"); banner.className = "shared-banner";
-          banner.innerHTML = "<span>Shared chat, read only.</span>";
+          const note = document.createElement("span"); note.textContent = title ? `Shared chat: ${title} (read only)` : "Shared chat (read only)"; banner.appendChild(note);
           const start = document.createElement("a"); start.href = "/"; start.textContent = "Start your own chat";
           banner.appendChild(start); log.prepend(banner);
           input.disabled = true; $("#sendBtn").disabled = true; input.placeholder = "Read-only shared chat";

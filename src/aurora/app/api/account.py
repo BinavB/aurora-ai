@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import json
 import re
 import secrets
 from collections.abc import Mapping
+from typing import Literal
 from urllib.parse import urlparse
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from aurora.app.auth import (
     AccountUser,
@@ -28,6 +30,10 @@ TITLE_LIMIT = 60
 _CHAT_ID = re.compile(r"^[A-Za-z0-9_-]{6,64}$")
 _TOKEN = re.compile(r"^[A-Za-z0-9_-]{16,64}$")
 SHARED_NAMESPACE = "shared_tokens"
+SNAPSHOT_NAMESPACE = "shared_snapshots"
+MANAGE_NAMESPACE = "shared_manage"
+SNAPSHOT_MESSAGE_LIMIT = 200
+SNAPSHOT_TEXT_LIMIT = 20000
 
 
 def _titles_namespace(user: AccountUser) -> str:
@@ -40,6 +46,16 @@ def _shares_namespace(user: AccountUser) -> str:
 
 class RenameBody(BaseModel):
     title: str
+
+
+class SnapshotMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1)
+
+
+class SnapshotBody(BaseModel):
+    title: str = ""
+    messages: list[SnapshotMessage] = Field(default_factory=list)
 
 
 def user_from_cookies(
@@ -252,20 +268,50 @@ def install_account_routes(
         await _revoke_share(memory, user, chat_id, resolve_session_id(user, chat_id))
         return {"ok": True}
 
+    @app.post("/shares")
+    async def create_snapshot(body: SnapshotBody) -> dict[str, str]:
+        if not body.messages or len(body.messages) > SNAPSHOT_MESSAGE_LIMIT:
+            raise ValidationError("A chat must have between 1 and 200 messages to share")
+        if any(len(message.content) > SNAPSHOT_TEXT_LIMIT for message in body.messages):
+            raise ValidationError("A message is too long to share")
+        token = secrets.token_urlsafe(18)
+        manage = secrets.token_urlsafe(24)
+        snapshot = {
+            "title": _title(body.title) or "Shared chat",
+            "messages": [message.model_dump() for message in body.messages],
+        }
+        await memory.kv.set(SNAPSHOT_NAMESPACE, token, json.dumps(snapshot))
+        await memory.kv.set(MANAGE_NAMESPACE, manage, token)
+        return {"token": token, "manage": manage}
+
+    @app.delete("/shares/{manage}")
+    async def revoke_snapshot(manage: str) -> dict[str, bool]:
+        if not _TOKEN.match(manage):
+            raise ValidationError("This link is not valid")
+        token = await memory.kv.get(MANAGE_NAMESPACE, manage)
+        if token:
+            await memory.kv.delete(SNAPSHOT_NAMESPACE, token)
+            await memory.kv.delete(MANAGE_NAMESPACE, manage)
+        return {"ok": True}
+
     @app.get("/shared/{token}")
-    async def read_shared_chat(token: str) -> dict[str, list[dict[str, str]]]:
-        session_id = (
-            await memory.kv.get(SHARED_NAMESPACE, token) if _TOKEN.match(token) else None
-        )
+    async def read_shared_chat(token: str) -> dict[str, object]:
+        if not _TOKEN.match(token):
+            raise ValidationError("This shared chat is no longer available")
+        snapshot = await memory.kv.get(SNAPSHOT_NAMESPACE, token)
+        if snapshot is not None:
+            return {"title": "", **json.loads(snapshot)}
+        session_id = await memory.kv.get(SHARED_NAMESPACE, token)
         if session_id is None:
             raise ValidationError("This shared chat is no longer available")
         history = await memory.conversation(session_id)
         return {
+            "title": "",
             "messages": [
                 {"role": message.role.value, "content": message.content}
                 for message in history
                 if message.role.value in {"user", "assistant"}
-            ]
+            ],
         }
 
 

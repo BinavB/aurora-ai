@@ -331,3 +331,42 @@ async def test_revoking_removes_orphaned_share_tokens_too() -> None:
     remaining = await memory.kv.items("shared_tokens")
     await memory.close()
     assert remaining == {"other-chat-token-9999": "u:1:chat-bbbb2"}
+
+
+def test_guest_chat_snapshot_is_shareable_without_an_account(tmp_path: Path) -> None:
+    with _client(tmp_path) as client:
+        created = client.post(
+            "/shares",
+            json={
+                "title": "Dubai trip",
+                "messages": [
+                    {"role": "user", "content": "plan it"},
+                    {"role": "assistant", "content": "Book early."},
+                ],
+            },
+        ).json()
+        client.cookies.clear()
+        shared = client.get(f"/shared/{created['token']}").json()
+        assert shared["title"] == "Dubai trip"
+        assert shared["messages"][1] == {"role": "assistant", "content": "Book early."}
+        assert client.delete(f"/shares/{created['manage']}").json() == {"ok": True}
+        assert client.get(f"/shared/{created['token']}").status_code == 400
+
+
+def test_snapshot_rejects_empty_or_oversized_chats(tmp_path: Path) -> None:
+    with _client(tmp_path) as client:
+        assert client.post("/shares", json={"messages": []}).status_code == 400
+        assert (
+            client.post(
+                "/shares", json={"messages": [{"role": "system", "content": "x"}]}
+            ).status_code
+            == 422
+        )
+        long_text = "x" * 20001
+        assert (
+            client.post(
+                "/shares", json={"messages": [{"role": "user", "content": long_text}]}
+            ).status_code
+            == 400
+        )
+        assert client.delete("/shares/not-valid").status_code == 400
