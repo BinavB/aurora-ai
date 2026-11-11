@@ -951,16 +951,29 @@
 
       /* ===== chat over WebSocket ===== */
       const newChatId = () => "c" + Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, "0")).join("");
-      const CHAT_KEY = "aurora.chat.v1";
-      const savedChat = (() => { try { const c = JSON.parse(localStorage.getItem(CHAT_KEY)); return c && Array.isArray(c.turns) ? c : { id: "", turns: [] }; } catch { return { id: "", turns: [] }; } })();
-      let sessionId = savedChat.id || newChatId();
-      function rememberLocally() { try { localStorage.setItem(CHAT_KEY, JSON.stringify(savedChat)); } catch { /* storage full or blocked */ } }
-      function resetSaved(id, turns) { savedChat.id = id; savedChat.turns = turns; rememberLocally(); }
+      const CHATS_KEY = "aurora.chats.v2", CURRENT_KEY = "aurora.current", LOCAL_CHAT_LIMIT = 50;
+      const turnTitle = (text) => String(text).replace(/\s+/g, " ").trim().slice(0, 60);
+      const localChats = (() => {
+        try { const c = JSON.parse(localStorage.getItem(CHATS_KEY)); if (c && typeof c === "object") return c; } catch { /* start fresh */ }
+        try {
+          const old = JSON.parse(localStorage.getItem("aurora.chat.v1"));
+          if (old && old.id && old.turns && old.turns.length) { const first = old.turns.find((t) => t.role === "user"); return { [old.id]: { id: old.id, title: turnTitle(first ? first.text : "New chat"), updated: Date.now(), turns: old.turns } }; }
+        } catch { /* nothing to migrate */ }
+        return {};
+      })();
+      const currentSaved = localStorage.getItem(CURRENT_KEY);
+      let sessionId = currentSaved && localChats[currentSaved] ? currentSaved : newChatId();
+      function persistLocal() {
+        try { localStorage.setItem(CHATS_KEY, JSON.stringify(localChats)); localStorage.setItem(CURRENT_KEY, sessionId); } catch { /* storage full or blocked */ }
+      }
       function saveTurn(role, text) {
-        if (savedChat.id !== sessionId) resetSaved(sessionId, []);
-        savedChat.turns = [...savedChat.turns, { role, text }].slice(-200);
-        rememberLocally();
-        if (role === "aurora" && currentUser) setTimeout(loadChats, 1500);
+        if (currentUser) { if (role === "aurora") setTimeout(loadChats, 1500); persistLocal(); return; }
+        const chat = localChats[sessionId] || (localChats[sessionId] = { id: sessionId, title: "", updated: 0, turns: [] });
+        chat.turns = [...chat.turns, { role, text }].slice(-200);
+        if (!chat.title && role === "user") chat.title = turnTitle(text);
+        chat.updated = Date.now();
+        Object.values(localChats).sort((x, y) => y.updated - x.updated).slice(LOCAL_CHAT_LIMIT).forEach((old) => delete localChats[old.id]);
+        persistLocal(); loadChats();
       }
       let ws = null, pending = null;
       function connect() {
@@ -1011,18 +1024,28 @@
         try {
           googleReady = !!(await (await fetch("/auth/config")).json()).google;
           showAccount((await (await fetch("/auth/me")).json()).user);
+          if (currentUser && !new URLSearchParams(location.search).get("shared")) restoreServerChat();
         } catch (e) { showAccount(null); }
         if (new URLSearchParams(location.search).get("signin") === "failed") {
           history.replaceState(null, "", "/");
           toast("Google sign-in did not finish. Please try again.");
         }
       }
+      async function restoreServerChat() {
+        const id = localStorage.getItem(CURRENT_KEY);
+        if (!id || localChats[id]) return;
+        try {
+          const res = await fetch("/chats/" + encodeURIComponent(id)); if (!res.ok) return;
+          const { messages } = await res.json();
+          if (messages.length) { sessionId = id; renderSaved(messages); loadChats(); }
+        } catch (e) { /* stay on a fresh chat */ }
+      }
       function startNewChat() {
-        stopSpeaking(); sessionId = newChatId(); resetSaved(sessionId, []); pending = null; lastAsk = { send: "", display: "" };
+        stopSpeaking(); sessionId = newChatId(); persistLocal(); pending = null; lastAsk = { send: "", display: "" };
         log.innerHTML = heroHtml; input.disabled = false; $("#sendBtn").disabled = false; input.placeholder = PLACEHOLDER[mode]; setSide(false); loadChats();
       }
       function renderSaved(messages) {
-        log.innerHTML = "";
+        log.innerHTML = messages.length ? "" : heroHtml;
         for (const m of messages) {
           if (m.role === "user") { addMsg("you", "user").textContent = m.content; continue; }
           if (m.role !== "assistant") continue;
@@ -1030,11 +1053,16 @@
           bubble.parentElement.appendChild(replyMeta(m.content, ""));
         }
       }
-      async function openChat(id) {
+      async function openChat(id, local) {
+        const show = (messages) => { sessionId = id; pending = null; input.disabled = false; $("#sendBtn").disabled = false; renderSaved(messages); persistLocal(); setSide(false); loadChats(); };
+        if (local) {
+          const chat = localChats[id];
+          if (chat) show(chat.turns.map((t) => ({ role: t.role === "user" ? "user" : "assistant", content: t.text })));
+          return;
+        }
         try {
           const res = await fetch("/chats/" + encodeURIComponent(id)); if (!res.ok) throw new Error();
-          const { messages } = await res.json();
-          sessionId = id; pending = null; resetSaved(id, messages.filter((m) => m.role === "user" || m.role === "assistant").map((m) => ({ role: m.role === "user" ? "user" : "aurora", text: m.content }))); input.disabled = false; $("#sendBtn").disabled = false; renderSaved(messages); setSide(false); loadChats();
+          show((await res.json()).messages);
         } catch (e) { toast("Could not open that chat."); }
       }
       const closeMenus = () => document.querySelectorAll(".row-menu").forEach((m) => (m.hidden = true));
@@ -1046,16 +1074,13 @@
       }
       function chatRow(chat) {
         const row = document.createElement("div"); row.className = "chat-item";
-        const open = document.createElement("button"); open.type = "button"; open.className = "chat-open" + (chat.id === sessionId ? " current" : ""); open.textContent = chat.title; open.title = chat.title; open.onclick = () => openChat(chat.id);
+        const open = document.createElement("button"); open.type = "button"; open.className = "chat-open" + (chat.id === sessionId ? " current" : ""); open.textContent = chat.title; open.title = chat.title; open.onclick = () => openChat(chat.id, chat.local);
         const more = document.createElement("button"); more.type = "button"; more.className = "iconbtn chat-more"; more.setAttribute("aria-label", "Chat options"); more.innerHTML = icon("more", 16);
         const menu = document.createElement("div"); menu.className = "row-menu"; menu.hidden = true;
         more.onclick = (e) => { e.stopPropagation(); const wasHidden = menu.hidden; closeMenus(); menu.hidden = !wasHidden; };
-        menu.append(
-          menuItem("pencil", "Rename", () => renameRow(row, chat)),
-          menuItem("share", "Share chat", () => shareChat(chat)),
-          menuItem("unlink", "Stop sharing", () => stopSharing(chat)),
-          menuItem("trash", "Delete", () => deleteChat(row, chat), true)
-        );
+        menu.append(menuItem("pencil", "Rename", () => renameRow(row, chat)));
+        if (!chat.local) menu.append(menuItem("share", "Share chat", () => shareChat(chat)), menuItem("unlink", "Stop sharing", () => stopSharing(chat)));
+        menu.append(menuItem("trash", "Delete", () => deleteChat(row, chat), true));
         row.append(open, more, menu); return row;
       }
       function renameRow(row, chat) {
@@ -1065,6 +1090,7 @@
           if (finished) return; finished = true;
           const title = input.value.trim();
           if (!save || !title || title === chat.title) { loadChats(); return; }
+          if (chat.local) { if (localChats[chat.id]) { localChats[chat.id].title = title; persistLocal(); } loadChats(); return; }
           const res = await fetch("/chats/" + encodeURIComponent(chat.id), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title }) });
           if (!res.ok) toast("Could not rename that chat.");
           loadChats();
@@ -1092,8 +1118,11 @@
       }
       async function deleteChat(row, chat) {
         if (!confirm(`Delete "${chat.title}"? This cannot be undone.`)) return;
-        const res = await fetch("/chats/" + encodeURIComponent(chat.id), { method: "DELETE" });
-        if (!res.ok) { toast("Could not delete that chat."); return; }
+        if (chat.local) { delete localChats[chat.id]; persistLocal(); }
+        else {
+          const res = await fetch("/chats/" + encodeURIComponent(chat.id), { method: "DELETE" });
+          if (!res.ok) { toast("Could not delete that chat."); return; }
+        }
         row.remove(); $("#chatsEmpty").hidden = $("#chatList").children.length > 0;
         if (chat.id === sessionId) startNewChat();
       }
@@ -1101,7 +1130,13 @@
       async function loadChats() {
         const list = $("#chatList"), hint = $("#chatsEmpty"), q = $("#chatSearch").value.trim();
         list.textContent = "";
-        if (!currentUser) { hint.textContent = "Sign in to save your chats to your account."; hint.hidden = false; return; }
+        if (!currentUser) {
+          const needle = q.toLowerCase();
+          const mine = Object.values(localChats).filter((c) => c.turns.length && (!needle || c.title.toLowerCase().includes(needle) || c.turns.some((t) => t.text.toLowerCase().includes(needle)))).sort((x, y) => y.updated - x.updated);
+          mine.forEach((c) => list.appendChild(chatRow({ id: c.id, title: c.title || "New chat", local: true })));
+          hint.textContent = q && !mine.length ? "No chats match your search." : "Saved on this device. Sign in to keep your chats on every device.";
+          hint.hidden = false; return;
+        }
         try {
           const res = await fetch("/chats" + (q ? "?q=" + encodeURIComponent(q) : "")); if (!res.ok) throw new Error();
           const { chats } = await res.json();
@@ -1136,7 +1171,7 @@
         ws.onclose = null; ws.close(); connect();
       });
       loadAccount();
-      for (const turn of savedChat.turns) {
+      for (const turn of (localChats[sessionId] ? localChats[sessionId].turns : [])) {
         if (turn.role === "user") { addMsg("you", "user").textContent = turn.text; continue; }
         const bubble = addMsg("aurora");
         bubble.classList.add("md"); bubble.innerHTML = mdToHtml(turn.text);
