@@ -92,3 +92,27 @@ async def test_tavily_search_raises_on_bad_status() -> None:
     )
     with pytest.raises(WebSearchError):
         await search.search("anything")
+
+
+def test_creator_questions_search_the_creator_name() -> None:
+    assert needs_web_search("who is binav?")
+    assert search_query("what does binav do") == "binav.b"
+
+
+async def test_chat_reply_carries_the_sources_used() -> None:
+    from aurora.app.database import Database
+    from aurora.app.memory import MemoryStore
+    from aurora.app.services import ChatService
+    from tests.app.test_services import FakeFactory, _CapturingProvider, _router
+
+    class _Search:
+        async def search(self, query: str, count: int = 5) -> list[SearchResult]:
+            return [SearchResult("Binav", "https://binav.test", "Profile")]
+
+    store = MemoryStore(Database())
+    await store.open()
+    service = ChatService(
+        _router(), FakeFactory(_CapturingProvider()), store, search=_Search()
+    )
+    reply = await service.chat("s", "who is binav")
+    assert reply.sources == [SearchResult("Binav", "https://binav.test", "Profile")]

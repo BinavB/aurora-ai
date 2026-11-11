@@ -90,7 +90,7 @@ def create_app(
     planning = PlanningService(router, factory)
     review = ReviewService(router, factory)
     implementation = ImplementationService(router, factory)
-    collaboration = CollaborationService(router, factory)
+    collaboration = CollaborationService(router, factory, search)
     autonomous = AutonomousService(router, factory)
     transcription = transcription or TranscriptionService()
 
@@ -269,6 +269,7 @@ async def _handle_ws_turn(chat: ChatService, websocket: WebSocket, data: dict) -
             "provider": reply.provider,
             "model": reply.model,
             "content": reply.content,
+            "sources": [item.model_dump() for item in reply.sources],
         }
     )
 

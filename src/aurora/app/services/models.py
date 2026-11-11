@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from aurora.app.agents.models import (
     AutonomousReport,
@@ -11,6 +11,7 @@ from aurora.app.agents.models import (
     Plan,
     ReviewResult,
 )
+from aurora.app.search.tavily import SearchResult
 
 
 class ChatReply(BaseModel):
@@ -20,6 +21,7 @@ class ChatReply(BaseModel):
     model: str
     content: str
     total_tokens: int
+    sources: list[SearchResult] = Field(default_factory=list)
 
 
 class PlanResult(BaseModel):

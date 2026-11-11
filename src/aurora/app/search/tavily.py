@@ -20,6 +20,8 @@ _LIVE_TOPIC = re.compile(
     re.IGNORECASE,
 )
 _SEARCH_PREFIX = re.compile(r"^\s*search(\s+for)?\s*[:,-]?\s*", re.IGNORECASE)
+_CREATOR = re.compile(r"\bbinav\b", re.IGNORECASE)
+CREATOR_QUERY = "binav.b"
 
 
 class WebSearchError(AuroraError):
@@ -71,12 +73,14 @@ def format_results(results: list[SearchResult]) -> str:
 
 
 def needs_web_search(message: str) -> bool:
-    if _SEARCH_PREFIX.match(message):
+    if _SEARCH_PREFIX.match(message) or _CREATOR.search(message):
         return True
     return _LIVE_TOPIC.search(message) is not None
 
 
 def search_query(message: str) -> str:
+    if _CREATOR.search(message) and not _SEARCH_PREFIX.match(message):
+        return CREATOR_QUERY
     stripped = _SEARCH_PREFIX.sub("", message, count=1).strip()
     return stripped or message.strip()
 

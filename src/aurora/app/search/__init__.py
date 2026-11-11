@@ -1,3 +1,4 @@
+from aurora.app.search.context import WebContext, gather_web_context, prompt_with_web
 from aurora.app.search.tavily import (
     SearchResult,
     TavilySearch,
@@ -9,6 +10,9 @@ from aurora.app.search.tavily import (
 )
 
 __all__ = [
+    "WebContext",
+    "gather_web_context",
+    "prompt_with_web",
     "TavilySearch",
     "SearchResult",
     "WebSearch",

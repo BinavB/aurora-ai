@@ -82,6 +82,17 @@
       .bubble.md ul.md { margin: 0.4rem 0; padding-left: 1.2rem; }
       .bubble.md ul.md li { margin: 0.16rem 0; }
       .bubble.md a { color: var(--accent-lt); }
+      .bubble.md .table-wrap { margin: 0.6rem 0; overflow-x: auto; border: 1px solid var(--stroke); border-radius: 12px; }
+      .bubble.md table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+      .bubble.md th, .bubble.md td { padding: 0.5rem 0.7rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--stroke); }
+      .bubble.md th { color: #fff; font-weight: 600; background: rgba(255,255,255,0.05); }
+      .bubble.md tr:last-child td { border-bottom: none; }
+      .sources { margin: 0.7rem 0 0.2rem; display: flex; flex-direction: column; gap: 0.35rem; }
+      .sources-label { font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-2); }
+      .source { display: flex; gap: 0.5rem; align-items: baseline; padding: 0.45rem 0.7rem; border: 1px solid var(--stroke); border-radius: 10px; background: rgba(0,0,0,0.22); color: var(--ink); text-decoration: none; font-size: 0.84rem; }
+      .source:hover { border-color: var(--stroke-acc); }
+      .source-host { color: var(--muted-2); font-size: 0.74rem; white-space: nowrap; }
+      .source-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .msg.user { align-self: flex-end; } .msg.user .who { text-align: right; }
       .msg.user .bubble { background: linear-gradient(135deg, rgba(77,141,255,0.22), rgba(169,123,255,0.16), rgba(255,123,197,0.14)); border-color: var(--stroke-acc); }
       .msg.err .bubble { border-color: rgba(255,107,139,0.45); color: var(--err); }
@@ -449,15 +460,43 @@
           /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
           '<a href="$2" target="_blank" rel="noopener">$1</a>'
         );
+        h = h.replace(
+          /(^|[\s(])(https?:\/\/[^\s<)]*[^\s<).,;:!?])/g,
+          '$1<a href="$2" target="_blank" rel="noopener">$2</a>'
+        );
         // group consecutive bullet / numbered lines into a list
         h = h.replace(/^(?:\s*(?:[-*]|\d+\.)\s+.+(?:\n|$))+/gm, (m) => {
           const items = m.trim().split(/\n/)
             .map((l) => `<li>${l.replace(/^\s*(?:[-*]|\d+\.)\s+/, "")}</li>`).join("");
           return `<ul class="md">${items}</ul>`;
         });
+        h = h.replace(/^(?:\|.*\|[ \t]*(?:\n|$))+/gm, (block) => {
+          const rows = block.trim().split("\n").map((line) => line.trim().replace(/^\||\|$/g, "").split("|").map((cell) => cell.trim()));
+          const body = rows.filter((cells) => !cells.every((cell) => /^:?-{2,}:?$/.test(cell)));
+          if (body.length < 2) return block;
+          const [head, ...rest] = body;
+          const heads = head.map((cell) => `<th>${cell}</th>`).join("");
+          const lines = rest.map((cells) => `<tr>${cells.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("");
+          return `<div class="table-wrap"><table><thead><tr>${heads}</tr></thead><tbody>${lines}</tbody></table></div>`;
+        });
         h = h.replace(/\n{2,}/g, "<br><br>").replace(/\n/g, "<br>");        // paragraphs
         h = h.replace(/(<\/(?:ul|pre)>)(?:<br>)+/g, "$1");                  // trim breaks after blocks
         return h.replace(/\u0000(\d+)\u0000/g, (_, i) => blocks[+i]);
+      }
+      function sourcesBox(sources) {
+        if (!sources || sources.length === 0) return null;
+        const box = document.createElement("div"); box.className = "sources";
+        const label = document.createElement("div"); label.className = "sources-label"; label.textContent = "Sources";
+        box.appendChild(label);
+        sources.forEach((source) => {
+          const link = document.createElement("a"); link.className = "source"; link.href = source.url; link.target = "_blank"; link.rel = "noopener";
+          const title = document.createElement("span"); title.className = "source-title"; title.textContent = source.title;
+          const host = document.createElement("span"); host.className = "source-host";
+          try { host.textContent = new URL(source.url).hostname.replace(/^www\./, ""); } catch (_) { host.textContent = ""; }
+          link.append(title, host);
+          box.appendChild(link);
+        });
+        return box;
       }
       /* turn technical errors into calm, human messages (and never leak details) */
       function friendly(code, message) {
@@ -577,7 +616,7 @@
         ws.onmessage = (ev) => {
           const m = JSON.parse(ev.data); if (!pending) return;
           if (m.type === "token") { if (pending.dataset.pending) { pending.textContent = ""; delete pending.dataset.pending; } pending.classList.add("cursor"); pending.textContent += (pending.textContent ? " " : "") + m.content; scrollDown(); }
-          else if (m.type === "done") { pending.classList.remove("cursor"); const raw = m.content || pending.textContent; pending.classList.add("md"); pending.innerHTML = mdToHtml(raw); const meta = document.createElement("div"); meta.className = "meta"; meta.textContent = `${m.provider} · ${m.model}`; meta.appendChild(copyBtn(raw)); pending.parentElement.appendChild(meta); setEngine(m.provider, m.model); pending = null; scrollDown(); }
+          else if (m.type === "done") { pending.classList.remove("cursor"); const raw = m.content || pending.textContent; pending.classList.add("md"); pending.innerHTML = mdToHtml(raw); const sources = sourcesBox(m.sources); if (sources) pending.parentElement.appendChild(sources); const meta = document.createElement("div"); meta.className = "meta"; meta.textContent = `${m.provider} · ${m.model}`; meta.appendChild(copyBtn(raw)); pending.parentElement.appendChild(meta); setEngine(m.provider, m.model); pending = null; scrollDown(); }
           else if (m.type === "error") { pending.classList.remove("cursor"); pending.parentElement.classList.add("err"); pending.textContent = friendly(m.code, m.message); pending = null; scrollDown(); }
         };
         ws.onclose = () => setTimeout(connect, 1500);
@@ -650,6 +689,7 @@
             if (!ok) throw new Error(friendly(d.code, d.message));
             bubble.classList.add("md");
             bubble.innerHTML = mdToHtml(d.content);
+            const sources = sourcesBox(d.sources); if (sources) bubble.parentElement.appendChild(sources);
             const meta = document.createElement("div"); meta.className = "meta";
             meta.textContent = `${EFFORT_LABEL[effort]} · team`;
             meta.appendChild(copyBtn(d.content));

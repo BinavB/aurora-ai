@@ -17,12 +17,16 @@ import asyncio
 import re
 from enum import StrEnum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from aurora.app.agents.llm import system, user
 from aurora.app.core.logging import get_logger
 from aurora.app.router.models import RoutingRequest, TaskKind
+from aurora.app.router.router import Router
+from aurora.app.search import WebSearch, gather_web_context, prompt_with_web
+from aurora.app.search.tavily import SearchResult
 from aurora.app.services.base import RoutedService
+from aurora.app.services.factory import ProviderFactory
 
 _logger = get_logger("services.collab")
 
@@ -58,10 +62,20 @@ class CollabResult(BaseModel):
 
     content: str
     roster: list[str]
+    sources: list[SearchResult] = Field(default_factory=list)
 
 
 class CollaborationService(RoutedService):
     """Run a task through an effort-scaled team of specialists."""
+
+    def __init__(
+        self,
+        router: Router,
+        factory: ProviderFactory,
+        search: WebSearch | None = None,
+    ) -> None:
+        super().__init__(router, factory)
+        self._search = search
 
     async def collaborate(
         self,
@@ -73,16 +87,23 @@ class CollaborationService(RoutedService):
         """Dispatch specialists per ``effort``, run in parallel, synthesize."""
         context = context or []
         count, use_synth, draft_cap, synth_cap = _PLAN[effort]
+        web = await gather_web_context(self._search, task)
 
         # Fast: a single, fastest agent — no dispatcher, no synthesis.
         if effort is Effort.FAST:
             decision, text = await self._complete(
                 RoutingRequest(task=task, kind=TaskKind.CHAT),
-                [system("Answer well and concisely."), *context, user(task)],
+                [
+                    system(prompt_with_web("Answer well and concisely.", web)),
+                    *context,
+                    user(task),
+                ],
                 max_tokens=draft_cap,
             )
             return CollabResult(
-                content=text, roster=[f"Solo · {decision.provider}/{decision.model}"]
+                content=text,
+                roster=[f"Solo · {decision.provider}/{decision.model}"],
+                sources=web.sources,
             )
 
         # A fast, logical dispatcher assigns the specialist focuses.
@@ -96,7 +117,7 @@ class CollaborationService(RoutedService):
             )
             decision, text = await self._complete(
                 RoutingRequest(task=task, kind=kind),
-                [system(prompt), *context, user(task)],
+                [system(prompt_with_web(prompt, web)), *context, user(task)],
                 max_tokens=draft_cap,
             )
             return focus, f"{decision.provider}/{decision.model}", text
@@ -110,7 +131,7 @@ class CollaborationService(RoutedService):
         roster += [f"{focus} · {engine}" for focus, engine, _ in good]
 
         if not use_synth:
-            return CollabResult(content=good[0][2], roster=roster)
+            return CollabResult(content=good[0][2], roster=roster, sources=web.sources)
 
         block = "\n\n".join(f"[{focus}]\n{text}" for focus, _, text in good)
         merge = (
@@ -126,7 +147,7 @@ class CollaborationService(RoutedService):
             max_tokens=synth_cap,
         )
         roster.append(f"Synthesizer · {decision.provider}/{decision.model}")
-        return CollabResult(content=final, roster=roster)
+        return CollabResult(content=final, roster=roster, sources=web.sources)
 
     async def _assign(
         self, kind: TaskKind, task: str, count: int
