@@ -4,6 +4,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import httpx
+from fastapi import WebSocketDisconnect
 from fastapi.testclient import TestClient
 
 from aurora.app.api import create_app
@@ -223,3 +224,18 @@ def test_session_signer_rejects_tampering_and_expiry() -> None:
     assert signer.read("not-a-token") is None
     now[0] = 2000.0
     assert signer.read(token) is None
+
+
+def test_websocket_rejects_other_sites(tmp_path: Path) -> None:
+    with _client(tmp_path) as client:
+        with client.websocket_connect("/ws/chat", headers={"origin": PUBLIC_URL}) as ws:
+            ws.send_json({"session_id": "s", "message": "hi"})
+            assert ws.receive_json()["type"] in {"token", "done"}
+        try:
+            with client.websocket_connect(
+                "/ws/chat", headers={"origin": "https://evil.example"}
+            ):
+                rejected = False
+        except WebSocketDisconnect:
+            rejected = True
+    assert rejected

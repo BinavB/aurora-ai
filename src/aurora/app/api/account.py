@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import secrets
 from collections.abc import Mapping
+from urllib.parse import urlparse
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
@@ -53,6 +54,17 @@ def resolve_session_id(user: AccountUser | None, requested: str) -> str:
     if not _CHAT_ID.match(requested):
         raise ValidationError("Invalid chat id")
     return f"{_user_prefix(user)}{requested}"
+
+
+def same_origin(headers: Mapping[str, str], public_url: str | None) -> bool:
+    origin = headers.get("origin")
+    if not origin:
+        return True
+    host = urlparse(origin).netloc
+    allowed = {headers.get("host", ""), headers.get("x-forwarded-host", "")}
+    if public_url:
+        allowed.add(urlparse(public_url).netloc)
+    return host in allowed - {""}
 
 
 def _user_prefix(user: AccountUser) -> str:

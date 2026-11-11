@@ -19,6 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from aurora.app.api.account import (
     install_account_routes,
     resolve_session_id,
+    same_origin,
     user_from_cookies,
 )
 from aurora.app.api.errors import install_error_handlers
@@ -271,6 +272,9 @@ def create_app(
 
     @app.websocket("/ws/chat")
     async def ws_chat(websocket: WebSocket) -> None:
+        if not same_origin(websocket.headers, settings.public_url):
+            await websocket.close(code=1008)
+            return
         await websocket.accept()
         try:
             while True:
