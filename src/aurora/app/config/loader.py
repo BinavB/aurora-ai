@@ -76,4 +76,5 @@ def load_settings(
     return AppSettings(
         log_level=source.get("AURORA_LOG_LEVEL", "INFO"),
         providers=providers,
+        tavily_api_key=source.get("TAVILY_API_KEY") or None,
     )

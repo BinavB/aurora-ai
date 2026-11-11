@@ -11,6 +11,8 @@ from aurora.app.database import Database
 from aurora.app.memory import MemoryStore
 from aurora.app.providers.base import BaseProvider
 from aurora.app.router import Router, build_catalog
+from aurora.app.search import WebSearchError
+from aurora.app.search.tavily import SearchResult
 from aurora.app.services import (
     ChatService,
     ImplementationService,
@@ -134,6 +136,59 @@ async def test_chat_leads_with_aurora_identity() -> None:
     assert first.role is Role.SYSTEM
     assert "Aurora" in first.content and "Binav" in first.content
     assert "google.com/search?q=binav.b" in first.content
+
+
+class _StaticSearch:
+    def __init__(self, results: list[SearchResult]) -> None:
+        self._results = results
+        self.queries: list[str] = []
+
+    async def search(self, query: str, count: int = 5) -> list[SearchResult]:
+        self.queries.append(query)
+        return self._results
+
+
+class _BrokenSearch:
+    async def search(self, query: str, count: int = 5) -> list[SearchResult]:
+        raise WebSearchError("down")
+
+
+async def test_chat_adds_search_results_for_live_questions() -> None:
+    provider = _CapturingProvider()
+    store = MemoryStore(Database())
+    await store.open()
+    search = _StaticSearch([SearchResult("Gold", "https://gold.test", "Rate today")])
+    service = ChatService(_router(), FakeFactory(provider), store, search=search)
+
+    await service.chat("s", "what is the gold price today")
+
+    assert search.queries == ["what is the gold price today"]
+    system = provider.last_request.messages[0].content
+    assert "<web_results>" in system and "Gold (https://gold.test)" in system
+
+
+async def test_chat_skips_search_for_ordinary_questions() -> None:
+    provider = _CapturingProvider()
+    store = MemoryStore(Database())
+    await store.open()
+    search = _StaticSearch([])
+    service = ChatService(_router(), FakeFactory(provider), store, search=search)
+
+    await service.chat("s", "explain recursion")
+
+    assert search.queries == []
+    assert "<web_results>" not in provider.last_request.messages[0].content
+
+
+async def test_chat_says_when_search_is_unavailable() -> None:
+    provider = _CapturingProvider()
+    store = MemoryStore(Database())
+    await store.open()
+    service = ChatService(_router(), FakeFactory(provider), store, search=_BrokenSearch())
+
+    await service.chat("s", "latest news")
+
+    assert "could not check live sources" in provider.last_request.messages[0].content
 
 
 # --- planning -------------------------------------------------------------

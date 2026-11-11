@@ -35,6 +35,7 @@ from aurora.app.providers.registry import registered_providers
 from aurora.app.router.catalog import build_catalog
 from aurora.app.router.models import Capability, TaskKind
 from aurora.app.router.router import Router
+from aurora.app.search import TavilySearch
 from aurora.app.services.autonomous_service import AutonomousService
 from aurora.app.services.chat_service import ChatService
 from aurora.app.services.collaboration_service import CollaborationService, Effort
@@ -84,7 +85,8 @@ def create_app(
     factory = factory or DefaultProviderFactory(settings, events)
     workspace_root = workspace_root or os.getcwd()
 
-    chat = ChatService(router, factory, memory, system_prompt)
+    search = TavilySearch(settings.tavily_api_key) if settings.tavily_api_key else None
+    chat = ChatService(router, factory, memory, system_prompt, search)
     planning = PlanningService(router, factory)
     review = ReviewService(router, factory)
     implementation = ImplementationService(router, factory)

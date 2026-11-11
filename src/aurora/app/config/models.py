@@ -36,6 +36,7 @@ class AppSettings(BaseModel):
 
     log_level: str = "INFO"
     providers: dict[str, ProviderSettings] = Field(default_factory=dict)
+    tavily_api_key: str | None = None
 
     def provider(self, name: str) -> ProviderSettings:
         """Return settings for ``name``.
