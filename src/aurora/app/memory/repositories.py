@@ -9,7 +9,7 @@ from aurora.app.memory.interfaces import (
     KeyValueRepository,
     RecordRepository,
 )
-from aurora.app.memory.models import Record, RecordKind, StoredMessage
+from aurora.app.memory.models import ChatSummary, Record, RecordKind, StoredMessage
 
 
 class SqliteConversationRepository(ConversationRepository):
@@ -46,6 +46,25 @@ class SqliteConversationRepository(ConversationRepository):
             "DELETE FROM conversations WHERE session_id = ?", (session_id,)
         )
 
+    async def summaries(self, prefix: str, limit: int) -> list[ChatSummary]:
+        rows = await self._db.query(
+            "SELECT c.session_id AS session_id, MAX(c.created_at) AS updated_at, "
+            "(SELECT first.content FROM conversations first "
+            "WHERE first.session_id = c.session_id AND first.role = ? "
+            "ORDER BY first.id ASC LIMIT 1) AS title "
+            "FROM conversations c WHERE substr(c.session_id, 1, ?) = ? "
+            "GROUP BY c.session_id ORDER BY updated_at DESC LIMIT ?",
+            (Role.USER.value, len(prefix), prefix, limit),
+        )
+        return [
+            ChatSummary(
+                session_id=row["session_id"],
+                title=row["title"] or "",
+                updated_at=row["updated_at"],
+            )
+            for row in rows
+        ]
+
 
 class SqliteRecordRepository(RecordRepository):
     """Knowledge records stored in the ``records`` table."""
@@ -62,8 +81,7 @@ class SqliteRecordRepository(RecordRepository):
     async def list(self, kind: RecordKind | None = None) -> list[Record]:
         if kind is None:
             rows = await self._db.query(
-                "SELECT id, kind, title, body, created_at FROM records "
-                "ORDER BY id DESC"
+                "SELECT id, kind, title, body, created_at FROM records ORDER BY id DESC"
             )
         else:
             rows = await self._db.query(

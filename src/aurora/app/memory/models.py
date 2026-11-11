@@ -34,6 +34,12 @@ class StoredMessage(BaseModel):
     created_at: str
 
 
+class ChatSummary(BaseModel):
+    session_id: str
+    title: str
+    updated_at: str
+
+
 class Record(BaseModel):
     """A durable knowledge record (decision, fix, issue, or note).
 

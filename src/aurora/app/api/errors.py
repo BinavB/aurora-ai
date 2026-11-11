@@ -19,6 +19,7 @@ _STATUS: dict[str, int] = {
     "validation_error": 400,
     "configuration_error": 400,
     "tool_error": 400,
+    "unauthorized": 401,
     "permission_denied": 403,
     "registry_error": 404,
     "router_error": 409,

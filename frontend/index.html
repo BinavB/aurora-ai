@@ -87,7 +87,6 @@
       .spacer { flex: 1; }
       .pill { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.8rem; border: 1px solid var(--stroke); border-radius: 999px; background: var(--glass); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); font-size: 0.8rem; color: var(--ink); }
       .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted-2); }
-      .status.up .dot { background: var(--accent-lt); animation: pulse 2s infinite; }
       @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(140,130,255,0.5); } 70% { box-shadow: 0 0 0 7px rgba(140,130,255,0); } 100% { box-shadow: 0 0 0 0 rgba(140,130,255,0); } }
 
       main { flex: 1; min-height: 0; overflow-y: auto; padding: 1rem 1.2rem; }
@@ -185,7 +184,6 @@
         header { gap: 0.6rem; padding: 0.7rem 0.9rem; }
         .brand h1 { font-size: 1.1rem; letter-spacing: 0.12em; }
         .brand small { display: none; }
-        #status { display: none; }               /* drop the "online" pill on phones */
         #engine { font-size: 0.72rem; padding: 0.35rem 0.65rem; max-width: 52vw;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         main { padding: 0.8rem 0.7rem; }
@@ -279,6 +277,24 @@
       .install-btn:hover { background: rgba(143,155,255,0.22); }
       .install-btn .install-label { margin-left: 0.25rem; }
       @media (max-width: 640px) { .install-btn .install-label { display: none; } .install-btn { padding-inline: 0.7rem; } }
+      .google-btn { cursor: pointer; font: inherit; font-size: 0.8rem; font-weight: 500; color: #1f1f1f; background: #fff; border-color: #dadce0; }
+      .google-btn:hover { background: #f1f3f4; }
+      .google-btn svg { width: 16px; height: 16px; flex: 0 0 auto; }
+      .avatar-btn, .avatar { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; border-radius: 50%; overflow: hidden; border: 1px solid var(--stroke-acc); background: var(--glass-2); color: var(--ink); font: inherit; font-weight: 600; padding: 0; }
+      .avatar-btn { width: 34px; height: 34px; cursor: pointer; }
+      .avatar { width: 44px; height: 44px; }
+      .avatar-btn img, .avatar img { width: 100%; height: 100%; object-fit: cover; }
+      .account-head { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.9rem; }
+      .account-head strong { display: block; font-size: 0.95rem; }
+      .chat-list { max-height: 44vh; overflow-y: auto; display: flex; flex-direction: column; gap: 0.4rem; margin: 0.7rem 0; }
+      .chat-item { display: flex; gap: 0.4rem; align-items: center; }
+      .chat-open { flex: 1; min-width: 0; text-align: left; cursor: pointer; font: inherit; font-size: 0.86rem; color: var(--ink); background: rgba(0,0,0,0.28); border: 1px solid var(--stroke); border-radius: 12px; padding: 0.55rem 0.7rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .chat-open:hover, .chat-open.current { border-color: var(--stroke-acc); }
+      .chat-open.current { color: var(--accent-lt); }
+      .chat-del { width: 34px; height: 34px; font-size: 0.85rem; }
+      .pill.action { cursor: pointer; font: inherit; font-size: 0.8rem; }
+      .toast { position: fixed; left: 50%; bottom: calc(1.2rem + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 60; max-width: 90vw; padding: 0.6rem 1rem; border-radius: 12px; border: 1px solid var(--stroke-acc); background: var(--glass-2); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); color: var(--ink); font-size: 0.85rem; }
+      @media (max-width: 640px) { .google-btn .google-label { display: none; } .google-btn { padding-inline: 0.6rem; } }
       .install-hint { position: fixed; left: 50%; bottom: 1.2rem; transform: translateX(-50%); z-index: 90; max-width: min(92vw, 420px); padding: 0.7rem 1rem; border-radius: 14px; border: 1px solid var(--stroke-acc); background: rgba(12,14,30,0.92); color: var(--ink); font-size: 0.86rem; text-align: center; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
       @media (prefers-reduced-motion: reduce) {
         #splash *, #splash { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
@@ -330,8 +346,9 @@
         </div>
         <span class="spacer"></span>
         <button class="pill install-btn" id="installBtn" type="button" hidden aria-label="Install app"><span aria-hidden="true">📲</span><span class="install-label">Install app</span></button>
+        <button class="pill google-btn" id="signInBtn" type="button" hidden aria-label="Sign in with Google"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg><span class="google-label">Sign in</span></button>
         <span class="pill" id="engine" title="Active engine (auto-selected)">✨ auto</span>
-        <span class="pill status" id="status"><span class="dot"></span><span id="statusText">connecting…</span></span>
+        <button class="avatar-btn" id="accountBtn" type="button" hidden aria-label="Account and saved chats"></button>
       </header>
 
       <main>
@@ -381,6 +398,23 @@
             <button type="button" class="pill" id="keysBtn" title="Connect model API keys">⚙️ Keys</button>
             <span class="hint">↵ send · ⇧↵ newline</span>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="accountPanel" hidden>
+      <div class="keys-card">
+        <div class="account-head">
+          <span class="avatar" id="accountAvatar"></span>
+          <div><strong id="accountName"></strong><span class="tag" id="accountEmail"></span></div>
+        </div>
+        <h3>Saved chats</h3>
+        <p class="tag" id="chatsEmpty" hidden>No saved chats yet. Start talking and they will appear here.</p>
+        <div class="chat-list" id="chatList"></div>
+        <div class="keys-actions">
+          <button type="button" class="pill action" id="newChatBtn">＋ New chat</button>
+          <button type="button" class="pill action" id="signOutBtn">Sign out</button>
+          <button type="button" class="iconbtn" id="accountClose" title="Close">✕</button>
         </div>
       </div>
     </div>
@@ -663,16 +697,13 @@
         return { set: (value) => { current = value; setLabel(); } };
       }
 
-      /* ===== boot: status + models ===== */
+      /* ===== boot: models ===== */
       (async () => {
         try {
-          const health = await (await fetch("/health")).json();
-          $("#statusText").textContent = health.status === "ok" ? "online" : "degraded";
-          $("#status").classList.toggle("up", health.status === "ok");
           const provs = (await (await fetch("/providers")).json()).providers || [];
           const opts = [{ value: "", label: "✨ Auto (smart routing)" }, ...provs.map((p) => ({ value: p, label: p }))];
           customSelect($("#modelCS"), opts, "", (v) => { modelValue = v; });
-        } catch { $("#statusText").textContent = "offline"; }
+        } catch { }
         refreshCapabilities();
       })();
 
@@ -707,7 +738,8 @@
       })();
 
       /* ===== chat over WebSocket ===== */
-      const sessionId = "web-" + Math.random().toString(36).slice(2);
+      const newChatId = () => "c" + Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, "0")).join("");
+      let sessionId = newChatId();
       let ws = null, pending = null;
       function connect() {
         const proto = location.protocol === "https:" ? "wss" : "ws";
@@ -730,6 +762,89 @@
         if (images && images.length) payload.images = images;
         ws.send(JSON.stringify(payload));
       }
+
+      /* ===== google account + saved chats ===== */
+      const heroHtml = $("#hero") ? $("#hero").outerHTML : "";
+      const accountPanel = $("#accountPanel");
+      let googleReady = false;
+      function toast(text) {
+        const t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); t.textContent = text;
+        document.body.appendChild(t); setTimeout(() => t.remove(), 4000);
+      }
+      function paintAvatar(el, user) {
+        el.textContent = "";
+        if (!user.picture) { el.textContent = (user.name || user.email || "?").trim().charAt(0).toUpperCase(); return; }
+        const img = document.createElement("img"); img.src = user.picture; img.alt = ""; img.referrerPolicy = "no-referrer"; el.appendChild(img);
+      }
+      function showAccount(user) {
+        $("#signInBtn").hidden = !!user || !googleReady;
+        $("#accountBtn").hidden = !user;
+        if (!user) return;
+        paintAvatar($("#accountBtn"), user); paintAvatar($("#accountAvatar"), user);
+        $("#accountName").textContent = user.name; $("#accountEmail").textContent = user.email;
+      }
+      async function loadAccount() {
+        try {
+          googleReady = !!(await (await fetch("/auth/config")).json()).google;
+          showAccount((await (await fetch("/auth/me")).json()).user);
+        } catch (e) { showAccount(null); }
+        if (new URLSearchParams(location.search).get("signin") === "failed") {
+          history.replaceState(null, "", "/");
+          toast("Google sign-in did not finish. Please try again.");
+        }
+      }
+      function startNewChat() {
+        sessionId = newChatId(); pending = null; lastAsk = { send: "", display: "" };
+        log.innerHTML = heroHtml;
+      }
+      function renderSaved(messages) {
+        log.innerHTML = "";
+        for (const m of messages) {
+          if (m.role === "user") { addMsg("you", "user").textContent = m.content; continue; }
+          if (m.role !== "assistant") continue;
+          const bubble = addMsg("aurora"); bubble.classList.add("md"); bubble.innerHTML = mdToHtml(m.content);
+          const meta = document.createElement("div"); meta.className = "meta"; meta.appendChild(copyBtn(m.content)); bubble.parentElement.appendChild(meta);
+        }
+      }
+      async function openChat(id) {
+        try {
+          const res = await fetch("/chats/" + encodeURIComponent(id)); if (!res.ok) throw new Error();
+          const { messages } = await res.json();
+          sessionId = id; pending = null; renderSaved(messages); accountPanel.hidden = true;
+        } catch (e) { toast("Could not open that chat."); }
+      }
+      function chatRow(chat) {
+        const row = document.createElement("div"); row.className = "chat-item";
+        const open = document.createElement("button"); open.type = "button"; open.className = "chat-open" + (chat.id === sessionId ? " current" : ""); open.textContent = chat.title; open.onclick = () => openChat(chat.id);
+        const del = document.createElement("button"); del.type = "button"; del.className = "iconbtn chat-del"; del.title = "Delete chat"; del.setAttribute("aria-label", "Delete chat"); del.textContent = "🗑";
+        del.onclick = async () => {
+          const res = await fetch("/chats/" + encodeURIComponent(chat.id), { method: "DELETE" });
+          if (!res.ok) { toast("Could not delete that chat."); return; }
+          row.remove(); $("#chatsEmpty").hidden = $("#chatList").children.length > 0;
+          if (chat.id === sessionId) startNewChat();
+        };
+        row.append(open, del); return row;
+      }
+      async function loadChats() {
+        const list = $("#chatList"); list.textContent = "";
+        try {
+          const res = await fetch("/chats"); if (!res.ok) throw new Error();
+          const { chats } = await res.json();
+          chats.forEach((chat) => list.appendChild(chatRow(chat)));
+          $("#chatsEmpty").hidden = chats.length > 0;
+        } catch (e) { $("#chatsEmpty").hidden = false; }
+      }
+      $("#signInBtn").addEventListener("click", () => { location.href = "/auth/google/login"; });
+      $("#accountBtn").addEventListener("click", () => { accountPanel.hidden = false; loadChats(); });
+      $("#accountClose").addEventListener("click", () => { accountPanel.hidden = true; });
+      accountPanel.addEventListener("click", (e) => { if (e.target === accountPanel) accountPanel.hidden = true; });
+      $("#newChatBtn").addEventListener("click", () => { startNewChat(); accountPanel.hidden = true; });
+      $("#signOutBtn").addEventListener("click", async () => {
+        await fetch("/auth/logout", { method: "POST" });
+        accountPanel.hidden = true; showAccount(null); startNewChat();
+        ws.onclose = null; ws.close(); connect();
+      });
+      loadAccount();
 
       /* ===== POST for plan/review/implement ===== */
       async function post(path, body, outEl, render) {

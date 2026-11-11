@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from aurora.app.memory.models import Record, RecordKind, StoredMessage
+from aurora.app.memory.models import ChatSummary, Record, RecordKind, StoredMessage
 
 
 class ConversationRepository(ABC):
@@ -25,6 +25,10 @@ class ConversationRepository(ABC):
     @abstractmethod
     async def clear(self, session_id: str) -> None:
         """Remove all messages for a session."""
+
+    @abstractmethod
+    async def summaries(self, prefix: str, limit: int) -> list[ChatSummary]:
+        """Return the newest sessions whose id starts with ``prefix``."""
 
 
 class RecordRepository(ABC):

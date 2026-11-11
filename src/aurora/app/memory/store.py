@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 
 from aurora.app.core.types import Role
 from aurora.app.database.engine import Database
-from aurora.app.memory.models import Record, RecordKind, StoredMessage
+from aurora.app.memory.models import ChatSummary, Record, RecordKind, StoredMessage
 from aurora.app.memory.repositories import (
     SqliteConversationRepository,
     SqliteKeyValueRepository,
@@ -69,6 +69,9 @@ class MemoryStore:
     async def clear_conversation(self, session_id: str) -> None:
         """Delete a session's message history."""
         await self.conversations.clear(session_id)
+
+    async def chat_summaries(self, prefix: str, limit: int = 50) -> list[ChatSummary]:
+        return await self.conversations.summaries(prefix, limit)
 
     # --- knowledge records -----------------------------------------------
 

@@ -37,6 +37,10 @@ class AppSettings(BaseModel):
     log_level: str = "INFO"
     providers: dict[str, ProviderSettings] = Field(default_factory=dict)
     tavily_api_key: str | None = None
+    google_client_id: str | None = None
+    google_client_secret: str | None = None
+    auth_secret: str | None = None
+    public_url: str | None = None
 
     def provider(self, name: str) -> ProviderSettings:
         """Return settings for ``name``.

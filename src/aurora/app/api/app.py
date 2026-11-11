@@ -11,10 +11,16 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import httpx
 from fastapi import FastAPI, File, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
+from aurora.app.api.account import (
+    install_account_routes,
+    resolve_session_id,
+    user_from_cookies,
+)
 from aurora.app.api.errors import install_error_handlers
 from aurora.app.api.schemas import (
     AgentBody,
@@ -25,6 +31,7 @@ from aurora.app.api.schemas import (
     PlanBody,
     ReviewBody,
 )
+from aurora.app.auth import AccountUser, GoogleOAuth, SessionSigner
 from aurora.app.config.loader import load_settings
 from aurora.app.config.models import AppSettings
 from aurora.app.core.events import EventBus
@@ -70,6 +77,7 @@ def create_app(
     frontend_dir: str | None = None,
     transcription: TranscriptionService | None = None,
     enable_agent: bool | None = None,
+    google_http: httpx.AsyncClient | None = None,
 ) -> FastAPI:
     """Build the AURORA API from its collaborators (all injectable)."""
     settings = settings or load_settings()
@@ -111,6 +119,25 @@ def create_app(
     app = FastAPI(title="AURORA AI", version="1.0.0", lifespan=lifespan)
     install_error_handlers(app)
 
+    google = None
+    signer = None
+    if (
+        settings.google_client_id
+        and settings.google_client_secret
+        and settings.auth_secret
+    ):
+        google = GoogleOAuth(
+            settings.google_client_id, settings.google_client_secret, google_http
+        )
+        signer = SessionSigner(settings.auth_secret)
+    install_account_routes(
+        app,
+        memory=memory,
+        google=google,
+        signer=signer,
+        public_url=settings.public_url,
+    )
+
     @app.get("/health")
     async def health() -> dict[str, str]:
         return {"status": "ok"}
@@ -151,6 +178,7 @@ def create_app(
 
     @app.post("/chat")
     async def post_chat(body: ChatBody) -> ChatReply:
+        resolve_session_id(None, body.session_id)
         return await chat.chat(
             body.session_id,
             body.message,
@@ -162,6 +190,7 @@ def create_app(
 
     @app.post("/chat/stream")
     async def post_chat_stream(body: ChatBody) -> StreamingResponse:
+        resolve_session_id(None, body.session_id)
         reply = await chat.chat(
             body.session_id,
             body.message,
@@ -246,7 +275,8 @@ def create_app(
         try:
             while True:
                 data = await websocket.receive_json()
-                await _handle_ws_turn(chat, websocket, data)
+                user = user_from_cookies(signer, websocket.cookies)
+                await _handle_ws_turn(chat, websocket, data, user)
         except WebSocketDisconnect:
             return
 
@@ -254,11 +284,16 @@ def create_app(
     return app
 
 
-async def _handle_ws_turn(chat: ChatService, websocket: WebSocket, data: dict) -> None:
+async def _handle_ws_turn(
+    chat: ChatService,
+    websocket: WebSocket,
+    data: dict,
+    user: AccountUser | None,
+) -> None:
     """Run one WebSocket chat turn, streaming tokens or a structured error."""
     try:
         reply = await chat.chat(
-            data["session_id"],
+            resolve_session_id(user, data["session_id"]),
             data["message"],
             offline=data.get("offline", False),
             prefer_provider=data.get("prefer_provider"),

@@ -77,4 +77,8 @@ def load_settings(
         log_level=source.get("AURORA_LOG_LEVEL", "INFO"),
         providers=providers,
         tavily_api_key=source.get("TAVILY_API_KEY") or None,
+        google_client_id=source.get("GOOGLE_CLIENT_ID") or None,
+        google_client_secret=source.get("GOOGLE_CLIENT_SECRET") or None,
+        auth_secret=source.get("AURORA_AUTH_SECRET") or None,
+        public_url=(source.get("AURORA_PUBLIC_URL") or "").rstrip("/") or None,
     )
