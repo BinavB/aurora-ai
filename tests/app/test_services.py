@@ -136,6 +136,14 @@ async def test_chat_leads_with_aurora_identity() -> None:
     assert first.role is Role.SYSTEM
     assert "Aurora" in first.content and "Binav" in first.content
     assert "google.com/search?q=binav.b" in first.content
+    assert (
+        "[Search binav.b on Google](https://www.google.com/search?q=binav.b)"
+        in first.content
+    )
+    assert "full-stack web developer" in first.content
+    assert "Flutter and Laravel" in first.content
+    assert "Search Google for the topic" in first.content
+    assert "add nothing else about Binav" not in first.content
 
 
 class _StaticSearch:
